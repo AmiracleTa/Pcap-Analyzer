@@ -49,20 +49,20 @@ function healthText() {
         </div>
         <div class="metric-strip" aria-label="Project metrics">
           <div class="metric">
+            <strong>Vue + Vite</strong>
+            <span>前端技术栈</span>
+          </div>
+          <div class="metric">
             <strong>Spring Boot</strong>
-            <span>后端服务</span>
-          </div>
-          <div class="metric">
-            <strong>tshark</strong>
-            <span>解析引擎</span>
-          </div>
-          <div class="metric">
-            <strong>{{ fileCount }}</strong>
-            <span>已上传文件</span>
+            <span>后端框架</span>
           </div>
           <div class="metric">
             <strong>MySQL</strong>
             <span>数据存储</span>
+          </div>
+          <div class="metric">
+            <strong>tshark</strong>
+            <span>解析引擎</span>
           </div>
         </div>
       </div>

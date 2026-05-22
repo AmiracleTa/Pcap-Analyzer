@@ -10,12 +10,14 @@ const props = defineProps({
 
 const emit = defineEmits(['select'])
 
-const keyword = ref('')
 const protocolFilter = ref('all')
-const ipFilter = ref('')
 const portFilter = ref('')
 const minLength = ref('')
 const maxLength = ref('')
+const sourceIpFilter = ref('')
+const destinationIpFilter = ref('')
+const timeStartRatio = ref(0)
+const timeEndRatio = ref(100)
 const pageSize = ref(25)
 const currentPage = ref(1)
 const selectedPacketId = ref(null)
@@ -26,38 +28,44 @@ const protocolOptions = computed(() => {
   return ['all', ...Array.from(protocols).sort()]
 })
 
+const packetTimes = computed(() => {
+  return props.packets
+    .map((packet) => Number(packet.timestampText))
+    .filter((value) => Number.isFinite(value))
+})
+
+const minPacketTime = computed(() => (packetTimes.value.length ? Math.min(...packetTimes.value) : null))
+const maxPacketTime = computed(() => (packetTimes.value.length ? Math.max(...packetTimes.value) : null))
+const selectedStartTime = computed(() => ratioToTime(timeStartRatio.value))
+const selectedEndTime = computed(() => ratioToTime(timeEndRatio.value))
+
 const filteredPackets = computed(() => {
-  const query = keyword.value.trim().toLowerCase()
-  const ipQuery = ipFilter.value.trim().toLowerCase()
+  const sourceIpQuery = sourceIpFilter.value.trim().toLowerCase()
+  const destinationIpQuery = destinationIpFilter.value.trim().toLowerCase()
   const portQuery = portFilter.value.trim()
   const min = Number(minLength.value)
   const max = Number(maxLength.value)
   const hasMin = minLength.value !== '' && Number.isFinite(min)
   const hasMax = maxLength.value !== '' && Number.isFinite(max)
+  let startTime = selectedStartTime.value
+  let endTime = selectedEndTime.value
+
+  if (startTime !== null && endTime !== null && startTime > endTime) {
+    ;[startTime, endTime] = [endTime, startTime]
+  }
 
   return props.packets.filter((packet) => {
-    if (query) {
-      const values = [
-        packet.sourceIp,
-        packet.destinationIp,
-        packet.sourcePort,
-        packet.destinationPort,
-        packet.protocol,
-        packet.info,
-      ]
-      if (!values.some((value) => String(value ?? '').toLowerCase().includes(query))) {
-        return false
-      }
+    if (sourceIpQuery && !String(packet.sourceIp ?? '').toLowerCase().includes(sourceIpQuery)) {
+      return false
+    }
+    if (
+      destinationIpQuery &&
+      !String(packet.destinationIp ?? '').toLowerCase().includes(destinationIpQuery)
+    ) {
+      return false
     }
     if (protocolFilter.value !== 'all' && packet.protocol !== protocolFilter.value) {
       return false
-    }
-    if (ipQuery) {
-      const sourceIp = String(packet.sourceIp ?? '').toLowerCase()
-      const destinationIp = String(packet.destinationIp ?? '').toLowerCase()
-      if (!sourceIp.includes(ipQuery) && !destinationIp.includes(ipQuery)) {
-        return false
-      }
     }
     if (portQuery) {
       const sourcePort = String(packet.sourcePort ?? '')
@@ -72,6 +80,15 @@ const filteredPackets = computed(() => {
     if (hasMax && Number(packet.length ?? 0) > max) {
       return false
     }
+    const packetTime = Number(packet.timestampText)
+    if (Number.isFinite(packetTime)) {
+      if (startTime !== null && packetTime < startTime) {
+        return false
+      }
+      if (endTime !== null && packetTime > endTime) {
+        return false
+      }
+    }
     return true
   })
 })
@@ -83,9 +100,21 @@ const pagedPackets = computed(() => {
   return filteredPackets.value.slice(start, start + pageSize.value)
 })
 
-watch([keyword, protocolFilter, ipFilter, portFilter, minLength, maxLength], () => {
-  currentPage.value = 1
-})
+watch(
+  [
+    sourceIpFilter,
+    destinationIpFilter,
+    portFilter,
+    protocolFilter,
+    minLength,
+    maxLength,
+    timeStartRatio,
+    timeEndRatio,
+  ],
+  () => {
+    currentPage.value = 1
+  },
+)
 
 watch(pageSize, () => {
   currentPage.value = 1
@@ -94,6 +123,8 @@ watch(pageSize, () => {
 watch(
   () => props.packets,
   () => {
+    timeStartRatio.value = 0
+    timeEndRatio.value = 100
     selectedPacketId.value = null
     currentPage.value = 1
   },
@@ -107,13 +138,25 @@ watch(filteredPackets, () => {
 })
 
 function resetFilters() {
-  keyword.value = ''
-  protocolFilter.value = 'all'
-  ipFilter.value = ''
+  sourceIpFilter.value = ''
+  destinationIpFilter.value = ''
   portFilter.value = ''
+  protocolFilter.value = 'all'
   minLength.value = ''
   maxLength.value = ''
+  timeStartRatio.value = 0
+  timeEndRatio.value = 100
   currentPage.value = 1
+}
+
+function ratioToTime(ratio) {
+  if (minPacketTime.value === null || maxPacketTime.value === null) {
+    return null
+  }
+  if (minPacketTime.value === maxPacketTime.value) {
+    return minPacketTime.value
+  }
+  return minPacketTime.value + (maxPacketTime.value - minPacketTime.value) * (Number(ratio) / 100)
 }
 
 function formatTimestamp(value) {
@@ -136,6 +179,13 @@ function formatTimestamp(value) {
     second: '2-digit',
     fractionalSecondDigits: 3,
   })
+}
+
+function formatTimeRangeValue(value) {
+  if (value === null) {
+    return '-'
+  }
+  return formatTimestamp(String(value))
 }
 
 function protocolClass(protocol) {
@@ -182,16 +232,43 @@ function selectPacket(packet) {
   <div v-else>
     <div class="packet-filter-panel">
       <div class="filter-grid">
-        <input v-model="keyword" type="search" placeholder="搜索摘要、IP、端口或协议" />
+        <input v-model="sourceIpFilter" type="search" placeholder="源 IP" />
+        <input v-model="destinationIpFilter" type="search" placeholder="目的 IP" />
+        <input v-model="portFilter" type="search" placeholder="端口" />
         <select v-model="protocolFilter" aria-label="协议筛选">
           <option v-for="protocol in protocolOptions" :key="protocol" :value="protocol">
             {{ protocol === 'all' ? '全部协议' : protocol }}
           </option>
         </select>
-        <input v-model="ipFilter" type="search" placeholder="筛选 IP" />
-        <input v-model="portFilter" type="search" placeholder="筛选端口" />
-        <input v-model="minLength" type="number" placeholder="最小长度" />
-        <input v-model="maxLength" type="number" placeholder="最大长度" />
+        <div class="length-filter-group">
+          <input v-model="minLength" type="number" placeholder="最小长度" />
+          <span>至</span>
+          <input v-model="maxLength" type="number" placeholder="最大长度" />
+        </div>
+      </div>
+      <div class="time-range-panel">
+        <div class="time-range-header">
+          <strong>时间范围</strong>
+          <span>{{ formatTimeRangeValue(selectedStartTime) }} - {{ formatTimeRangeValue(selectedEndTime) }}</span>
+        </div>
+        <div class="range-stack">
+          <input
+            v-model.number="timeStartRatio"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            :disabled="minPacketTime === null || maxPacketTime === null"
+          />
+          <input
+            v-model.number="timeEndRatio"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            :disabled="minPacketTime === null || maxPacketTime === null"
+          />
+        </div>
       </div>
       <div class="filter-summary-row">
         <span class="badge">筛选结果 {{ filteredPackets.length }} / {{ packets.length }}</span>
@@ -205,11 +282,12 @@ function selectPacket(packet) {
           <tr>
             <th>序号</th>
             <th>时间</th>
-            <th>源端点</th>
-            <th>目的端点</th>
+            <th>源 IP</th>
+            <th>目的 IP</th>
+            <th>源端口</th>
+            <th>目的端口</th>
             <th>协议</th>
             <th>长度</th>
-            <th>摘要</th>
           </tr>
         </thead>
         <tbody>
@@ -217,19 +295,23 @@ function selectPacket(packet) {
             v-for="packet in pagedPackets"
             :key="packet.id"
             :class="{ selected: selectedPacketId === packet.id }"
+            :title="packet.info || '无摘要'"
             @click="selectPacket(packet)"
           >
             <td>{{ packet.packetNo }}</td>
             <td :title="packet.timestampText">{{ formatTimestamp(packet.timestampText) }}</td>
-            <td>{{ endpoint(packet.sourceIp, packet.sourcePort) }}</td>
-            <td>{{ endpoint(packet.destinationIp, packet.destinationPort) }}</td>
+            <td :title="endpoint(packet.sourceIp, packet.sourcePort)">{{ packet.sourceIp || '-' }}</td>
+            <td :title="endpoint(packet.destinationIp, packet.destinationPort)">
+              {{ packet.destinationIp || '-' }}
+            </td>
+            <td>{{ packet.sourcePort ?? '-' }}</td>
+            <td>{{ packet.destinationPort ?? '-' }}</td>
             <td>
               <span class="protocol-pill" :class="protocolClass(packet.protocol)">
                 {{ packet.protocol || '-' }}
               </span>
             </td>
             <td>{{ packet.length }}</td>
-            <td class="packet-info-cell" :title="packet.info">{{ packet.info }}</td>
           </tr>
         </tbody>
       </table>

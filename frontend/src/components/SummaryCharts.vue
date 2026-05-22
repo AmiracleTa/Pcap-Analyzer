@@ -51,12 +51,31 @@ function renderCharts() {
       top: 'middle',
       textStyle: { color: '#667085', fontSize: 14, fontWeight: 400 },
     },
-    tooltip: { trigger: 'item' },
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: {c}',
+    },
     series: [
       {
         name: '协议',
         type: 'pie',
-        radius: ['45%', '70%'],
+        radius: ['32%', '56%'],
+        center: ['50%', '56%'],
+        avoidLabelOverlap: true,
+        label: {
+          show: true,
+          position: 'outer',
+          alignTo: 'edge',
+          edgeDistance: 8,
+          formatter: '{b}',
+          overflow: 'none',
+          width: 120,
+        },
+        labelLine: {
+          show: true,
+          length: 20,
+          length2: 24,
+        },
         data: protocolData(),
       },
     ],
