@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { analyzeFile, deleteFile, getHealth, listFiles } from './api/files'
 import AnalysisPage from './views/AnalysisPage.vue'
+import FeatureSection from './components/FeatureSection.vue'
 import FilePage from './views/FilePage.vue'
 import HeroSection from './components/HeroSection.vue'
 import SiteHeader from './components/SiteHeader.vue'
@@ -130,11 +131,11 @@ onBeforeUnmount(() => {
     />
     <main>
       <HeroSection
-        :health="health"
-        :file-count="files.length"
-        :selected-file="selectedFile"
         @select-sample-section="scrollToSection('files')"
       />
+      <section id="features" class="section features-section">
+        <FeatureSection />
+      </section>
       <section id="files" class="section">
         <FilePage
           :files="files"

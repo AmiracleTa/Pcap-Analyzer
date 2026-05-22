@@ -15,9 +15,9 @@ defineEmits(['refresh', 'uploaded', 'select-file', 'analyze', 'delete'])
 <template>
   <div class="workspace">
     <SectionHeading
-      eyebrow="Capture Files"
-      title="上传与管理抓包文件"
-      text="支持 pcap、pcapng、cap 文件上传，文件保存到后端 uploads 目录，并写入 MySQL。"
+      eyebrow="UPLOAD"
+      title="上传与管理数据包"
+      text="上传抓包文件后进行解析，并在下方管理已上传的数据包。"
     />
 
     <div class="content-grid file-section-grid">

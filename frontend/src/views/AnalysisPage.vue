@@ -48,6 +48,40 @@ function formatSize(value) {
   return `${(value / 1024 / 1024).toFixed(1)} MB`
 }
 
+function formatDateObject(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return '-'
+  }
+  const pad = (value) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+function formatPacketTime(value) {
+  if (value === null || value === undefined || value === '') {
+    return '-'
+  }
+  const raw = String(value).trim()
+  const numeric = Number(raw)
+  if (Number.isFinite(numeric)) {
+    return formatDateObject(new Date(numeric * 1000))
+  }
+  const match = raw.match(/^(\d{4}-\d{2}-\d{2})[T\s](\d{2}:\d{2}:\d{2})/)
+  if (match) {
+    return `${match[1]} ${match[2]}`
+  }
+  return raw.replace('T', ' ').replace(/\.\d+$/, '')
+}
+
+function statusText(status) {
+  const map = {
+    uploaded: '待分析',
+    analyzing: '分析中',
+    analyzed: '已解析',
+    failed: '解析失败',
+  }
+  return map[status] || status || '-'
+}
+
 async function loadAnalysis(file) {
   selectedPacket.value = null
   if (!file) {
@@ -78,7 +112,7 @@ watch(() => props.selectedFile, loadAnalysis, { immediate: true })
   <div class="workspace">
     <SectionHeading
       eyebrow="Packet Analysis"
-      title="解析结果与协议洞察"
+      title="解析结果"
       text="查看协议分布、流量趋势、包长度、DNS/HTTP 特征和原始数据包详情。"
     />
 
@@ -88,7 +122,6 @@ watch(() => props.selectedFile, loadAnalysis, { immediate: true })
         <header class="section-header">
           <div>
             <h3>{{ fileTitle }}</h3>
-            <p class="muted">真实 tshark 解析数据</p>
           </div>
           <div class="actions">
             <button class="secondary-button" type="button" @click="exportCsv(selectedFile.id)">
@@ -99,9 +132,9 @@ watch(() => props.selectedFile, loadAnalysis, { immediate: true })
               <FileJson :size="17" aria-hidden="true" />
               导出 JSON
             </button>
-            <span class="badge">
-              <LoaderCircle v-if="loading" class="spin" :size="15" aria-hidden="true" />
-              {{ loading ? '加载中' : '真实解析数据' }}
+            <span v-if="loading" class="badge">
+              <LoaderCircle class="spin" :size="15" aria-hidden="true" />
+              加载中
             </span>
           </div>
         </header>
@@ -122,15 +155,15 @@ watch(() => props.selectedFile, loadAnalysis, { immediate: true })
           </div>
           <div>
             <dt>状态</dt>
-            <dd>{{ selectedFile.status }}</dd>
+            <dd>{{ statusText(selectedFile.status) }}</dd>
           </div>
           <div>
             <dt>开始时间</dt>
-            <dd>{{ summary.startTimeText || '-' }}</dd>
+            <dd>{{ formatPacketTime(summary.startTimeText) }}</dd>
           </div>
           <div>
             <dt>结束时间</dt>
-            <dd>{{ summary.endTimeText || '-' }}</dd>
+            <dd>{{ formatPacketTime(summary.endTimeText) }}</dd>
           </div>
         </dl>
       </div>

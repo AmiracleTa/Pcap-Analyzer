@@ -153,12 +153,12 @@ onBeforeUnmount(() => {
       <div ref="protocolRef" class="chart"></div>
     </section>
     <section class="stack-panel chart-panel" data-reveal>
-      <h3>流量趋势</h3>
-      <div ref="trendRef" class="chart"></div>
-    </section>
-    <section class="stack-panel chart-panel" data-reveal>
       <h3>包长度分布</h3>
       <div ref="lengthRef" class="chart"></div>
     </section>
   </div>
+  <section class="stack-panel chart-panel trend-panel" data-reveal>
+    <h3>流量趋势</h3>
+    <div ref="trendRef" class="chart trend-chart"></div>
+  </section>
 </template>

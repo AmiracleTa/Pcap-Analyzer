@@ -19,9 +19,10 @@ defineEmits(['toggle-dark', 'toggle-menu'])
       </a>
 
       <nav class="desktop-nav" aria-label="Primary navigation">
+        <a href="#top">首页</a>
+        <a href="#features">功能</a>
         <a href="#files">文件管理</a>
-        <a href="#analysis">分析结果</a>
-        <a href="#files">后端健康</a>
+        <a href="#analysis">解析结果</a>
       </nav>
 
       <div class="header-actions">
@@ -44,9 +45,10 @@ defineEmits(['toggle-dark', 'toggle-menu'])
     </div>
 
     <div class="mobile-panel" :class="{ open: menuOpen }">
+      <a href="#top">首页</a>
+      <a href="#features">功能</a>
       <a href="#files">文件管理</a>
-      <a href="#analysis">分析结果</a>
-      <a href="#files">后端健康</a>
+      <a href="#analysis">解析结果</a>
       <a class="mobile-cta" href="#files">开始分析</a>
     </div>
   </header>

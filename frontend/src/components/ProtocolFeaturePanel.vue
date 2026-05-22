@@ -5,11 +5,18 @@ defineProps({
     required: true,
   },
 })
+
+function dnsAnswerText(value) {
+  if (value === null || value === undefined || String(value).trim() === '') {
+    return '无应答'
+  }
+  return value
+}
 </script>
 
 <template>
-  <div class="feature-grid">
-    <section class="stack-panel feature-panel" data-reveal>
+  <div class="protocol-feature-stack">
+    <section class="stack-panel feature-panel protocol-record-panel" data-reveal>
       <h3>DNS 记录</h3>
       <div v-if="(summary.dnsRecords || []).length === 0" class="empty compact">暂无数据</div>
       <div v-else class="table-wrap elevated-table">
@@ -25,14 +32,14 @@ defineProps({
             <tr v-for="record in summary.dnsRecords" :key="`dns-${record.packetNo}-${record.queryName}-${record.answerAddress}`">
               <td>{{ record.packetNo }}</td>
               <td>{{ record.queryName }}</td>
-              <td>{{ record.answerAddress }}</td>
+              <td>{{ dnsAnswerText(record.answerAddress) }}</td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <section class="stack-panel feature-panel" data-reveal>
+    <section class="stack-panel feature-panel protocol-record-panel" data-reveal>
       <h3>HTTP 记录</h3>
       <div v-if="(summary.httpRecords || []).length === 0" class="empty compact">暂无数据</div>
       <div v-else class="table-wrap elevated-table">
