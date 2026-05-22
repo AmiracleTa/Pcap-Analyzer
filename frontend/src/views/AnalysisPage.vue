@@ -145,9 +145,9 @@ watch(() => props.selectedFile, loadAnalysis, { immediate: true })
       <PacketTable :packets="packets" @select="selectedPacket = $event" />
       <div class="section-spacer"></div>
       <section class="stack-panel detail-panel" data-reveal>
-        <h3>数据包详情</h3>
+        <h3>选中数据包详情</h3>
         <pre class="detail-json">{{
-          selectedPacket ? JSON.stringify(selectedPacket, null, 2) : '暂无选中数据包'
+          selectedPacket ? JSON.stringify(selectedPacket, null, 2) : '点击上方数据包行查看完整 JSON 详情'
         }}</pre>
       </section>
     </div>

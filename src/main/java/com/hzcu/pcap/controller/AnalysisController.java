@@ -4,7 +4,9 @@ import com.hzcu.pcap.entity.PacketRecord;
 import com.hzcu.pcap.repository.PacketRecordRepository;
 import com.hzcu.pcap.service.PacketAnalysisService;
 import com.hzcu.pcap.service.SummaryService;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,15 +47,15 @@ public class AnalysisController {
         return summaryService.getSummary(id);
     }
 
-    @GetMapping(value = "/export/csv", produces = "text/csv")
-    public String exportCsv(@PathVariable Long id) {
+    @GetMapping(value = "/export/csv", produces = "text/csv;charset=UTF-8")
+    public ResponseEntity<String> exportCsv(@PathVariable Long id) {
         List<PacketRecord> packets = packetRecordRepository.findByFileId(id);
-        StringBuilder csv = new StringBuilder();
-        csv.append("packetNo,timestamp,sourceIp,destinationIp,sourcePort,destinationPort,protocol,length,info\n");
+        StringBuilder csv = new StringBuilder("\uFEFF");
+        csv.append("序号,时间戳,源地址,目的地址,源端口,目的端口,协议,长度,摘要\n");
         for (PacketRecord packet : packets) {
             csv.append(csvValue(packet.getPacketNo()))
                     .append(',')
-                    .append(csvValue(packet.getTimestampText()))
+                    .append(csvTextValue(packet.getTimestampText()))
                     .append(',')
                     .append(csvValue(packet.getSourceIp()))
                     .append(',')
@@ -70,7 +72,9 @@ public class AnalysisController {
                     .append(csvValue(packet.getInfo()))
                     .append('\n');
         }
-        return csv.toString();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"packets-" + id + ".csv\"")
+                .body(csv.toString());
     }
 
     @GetMapping(value = "/export/json", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -79,7 +83,29 @@ public class AnalysisController {
     }
 
     private String csvValue(Object value) {
-        String text = value == null ? "" : value.toString();
-        return "\"" + text.replace("\"", "\"\"") + "\"";
+        if (value == null) {
+            return "\"\"";
+        }
+        String text = sanitizeCsvText(value.toString());
+        if (text.matches("\\d{13,}")) {
+            return csvTextValue(text);
+        }
+        if (!text.isEmpty() && "=+-@".indexOf(text.charAt(0)) >= 0) {
+            text = "'" + text;
+        }
+        return "\"" + text + "\"";
+    }
+
+    private String csvTextValue(Object value) {
+        if (value == null) {
+            return "\"\"";
+        }
+        return "=\"" + sanitizeCsvText(value.toString()) + "\"";
+    }
+
+    private String sanitizeCsvText(String text) {
+        return text.replace("\"", "\"\"")
+                .replace('\r', ' ')
+                .replace('\n', ' ');
     }
 }

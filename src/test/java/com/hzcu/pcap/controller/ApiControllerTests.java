@@ -1,5 +1,6 @@
 package com.hzcu.pcap.controller;
 
+import com.hzcu.pcap.entity.PacketRecord;
 import com.hzcu.pcap.repository.PacketRecordRepository;
 import com.hzcu.pcap.service.FileStorageService;
 import com.hzcu.pcap.service.PacketAnalysisService;
@@ -10,8 +11,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -20,6 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
@@ -106,10 +112,43 @@ class ApiControllerTests {
                 .andExpect(jsonPath("$.httpRecords").exists());
         mockMvc.perform(get("/api/files/3/export/csv"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("packetNo,timestamp,sourceIp,destinationIp,sourcePort,destinationPort,protocol,length,info\n"));
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"packets-3.csv\""))
+                .andExpect(content().string(containsString("序号,时间戳,源地址,目的地址,源端口,目的端口,协议,长度,摘要")));
         mockMvc.perform(get("/api/files/3/export/json"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("{\"packets\":[]}"));
+    }
+
+    @Test
+    void csvExportEscapesExcelSensitiveValuesAndNewlines() throws Exception {
+        PacketAnalysisService packetAnalysisService = mock(PacketAnalysisService.class);
+        SummaryService summaryService = mock(SummaryService.class);
+        PacketRecordRepository packetRecordRepository = mock(PacketRecordRepository.class);
+        PacketRecord packet = new PacketRecord();
+        packet.setPacketNo(1L);
+        packet.setTimestampText("1779350202.670520900");
+        packet.setSourceIp("192.168.222.190");
+        packet.setDestinationIp("104.16.7.34");
+        packet.setSourcePort(43489);
+        packet.setDestinationPort(443);
+        packet.setProtocol("TCP");
+        packet.setLength(54);
+        packet.setInfo("43489 → 443 [ACK]\nSeq=1");
+        when(packetRecordRepository.findByFileId(3L)).thenReturn(List.of(packet));
+        MockMvc mockMvc = standaloneSetup(
+                new AnalysisController(packetAnalysisService, summaryService, packetRecordRepository)
+        ).build();
+
+        String csv = mockMvc.perform(get("/api/files/3/export/csv"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"packets-3.csv\""))
+                .andExpect(content().string(containsString("=\"1779350202.670520900\"")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertFalse(csv.contains("[ACK]\nSeq=1"));
+        assertTrue(csv.contains("43489 → 443 [ACK] Seq=1"));
     }
 
     @Test
