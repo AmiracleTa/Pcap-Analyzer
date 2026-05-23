@@ -7,6 +7,9 @@ defineProps({
   files: { type: Array, default: () => [] },
   health: { type: String, required: true },
   message: { type: String, default: '' },
+  analysisProgress: { type: Object, default: null },
+  analyzingFileId: { type: Number, default: null },
+  deletingFileId: { type: Number, default: null },
 })
 
 defineEmits(['refresh', 'uploaded', 'select-file', 'analyze', 'delete'])
@@ -48,10 +51,29 @@ defineEmits(['refresh', 'uploaded', 'select-file', 'analyze', 'delete'])
         </div>
         <FileTable
           :files="files"
+          :analyzing-file-id="analyzingFileId"
+          :deleting-file-id="deletingFileId"
           @select="$emit('select-file', $event)"
           @analyze="$emit('analyze', $event)"
           @delete="$emit('delete', $event)"
         />
+      </section>
+
+      <section v-if="analysisProgress" id="analysis-progress" class="stack-panel analysis-progress-panel">
+        <div class="section-header">
+          <div>
+            <h3>解析进度</h3>
+            <p class="muted">{{ analysisProgress.message }}</p>
+          </div>
+          <span class="badge">{{ analysisProgress.percent }}%</span>
+        </div>
+        <div class="progress-track" aria-label="解析进度">
+          <span class="progress-fill" :style="{ width: `${analysisProgress.percent}%` }"></span>
+        </div>
+        <div class="progress-meta">
+          <span>已解析 {{ analysisProgress.processedPackets }} / {{ analysisProgress.totalPackets }} 个数据包</span>
+          <span>{{ analysisProgress.phase }}</span>
+        </div>
       </section>
     </div>
   </div>

@@ -16,6 +16,7 @@ import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -151,12 +152,24 @@ class PacketAnalysisServiceTests {
 
     static class FakeTsharkCommandRunner extends TsharkCommandRunner {
         @Override
+        public long countPackets(Path capturePath) {
+            return 3L;
+        }
+
+        @Override
         public List<String> readPacketFieldLines(Path capturePath) {
             return List.of(
                     "1\t1716260000.100000\t192.168.1.2\t\t93.184.216.34\t\t51514\t\t443\t\tTLS\t128\tClient Hello",
                     "2\t1716260001.200000\t93.184.216.34\t\t192.168.1.2\t\t443\t\t51514\t\tTLS\t256\tServer Hello",
                     "3\t1716260001.300000\t192.168.1.2\t\t8.8.8.8\t\t\t5353\t\t53\tDNS\t80\tStandard query"
             );
+        }
+
+        @Override
+        public List<String> readPacketFieldLines(Path capturePath, Consumer<String> lineConsumer) {
+            List<String> lines = readPacketFieldLines(capturePath);
+            lines.forEach(lineConsumer);
+            return lines;
         }
 
         @Override
@@ -183,11 +196,23 @@ class PacketAnalysisServiceTests {
         int detailLimit = -1;
 
         @Override
+        public long countPackets(Path capturePath) {
+            return 2L;
+        }
+
+        @Override
         public List<String> readPacketFieldLines(Path capturePath) {
             return List.of(
                     "1\t1716260000.100000\t192.168.1.2\t\t93.184.216.34\t\t51514\t\t443\t\tTLS\t128\tClient Hello",
                     "2\t1716260001.200000\t93.184.216.34\t\t192.168.1.2\t\t443\t\t51514\t\tTLS\t256\tServer Hello"
             );
+        }
+
+        @Override
+        public List<String> readPacketFieldLines(Path capturePath, Consumer<String> lineConsumer) {
+            List<String> lines = readPacketFieldLines(capturePath);
+            lines.forEach(lineConsumer);
+            return lines;
         }
 
         @Override

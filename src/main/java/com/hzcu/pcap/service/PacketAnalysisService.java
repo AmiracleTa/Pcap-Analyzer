@@ -2,6 +2,7 @@ package com.hzcu.pcap.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hzcu.pcap.dto.AnalysisProgressEvent;
 import com.hzcu.pcap.entity.AnalysisSummary;
 import com.hzcu.pcap.entity.CaptureFile;
 import com.hzcu.pcap.entity.PacketRecord;
@@ -17,6 +18,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class PacketAnalysisService {
@@ -46,20 +48,55 @@ public class PacketAnalysisService {
 
     @Transactional
     public Map<String, Object> analyze(Long fileId) {
+        return analyzeInternal(fileId, AnalysisProgressReporter.noop());
+    }
+
+    @Transactional
+    public Map<String, Object> analyzeWithProgress(Long fileId, AnalysisProgressReporter reporter) {
+        return analyzeInternal(fileId, reporter);
+    }
+
+    private Map<String, Object> analyzeInternal(Long fileId, AnalysisProgressReporter reporter) {
         CaptureFile captureFile = fileStorageService.getFile(fileId);
         try {
+            reporter.report(AnalysisProgressEvent.of("starting", "prepare", "正在准备解析文件", 0, 0, 0));
             Path capturePath = fileStorageService.getDownloadPath(fileId);
+            captureFile.setStatus("analyzing");
+            captureFileRepository.save(captureFile);
+
+            reporter.report(AnalysisProgressEvent.of("counting", "capinfos-count", "正在读取数据包总数", 0, 0, 0));
+            long totalPackets = tsharkCommandRunner.countPackets(capturePath);
+            reporter.report(AnalysisProgressEvent.of("parsing", "tshark-fields", "正在读取数据包字段", totalPackets, 0, 0));
+
             packetRecordRepository.deleteByFileId(fileId);
             analysisSummaryRepository.deleteByFileId(fileId);
 
-            List<String> lines = tsharkCommandRunner.readPacketFieldLines(capturePath);
+            AtomicLong processedPackets = new AtomicLong(0);
+            List<String> lines = tsharkCommandRunner.readPacketFieldLines(capturePath, line -> {
+                long processed = processedPackets.incrementAndGet();
+                reporter.report(AnalysisProgressEvent.of(
+                        "parsing",
+                        "tshark-fields",
+                        "正在读取数据包字段",
+                        totalPackets,
+                        processed,
+                        percent(processed, totalPackets)
+                ));
+            });
+
+            reporter.report(AnalysisProgressEvent.of("saving", "packet-detail", "正在读取数据包详情", totalPackets, processedPackets.get(), 90));
             List<String> detailItems = tsharkCommandRunner.readPacketDetailJsonItems(capturePath, DETAIL_PACKET_LIMIT);
             List<String> featureLines = tsharkCommandRunner.readProtocolFeatureLines(capturePath);
+
             List<PacketRecord> records = new ArrayList<>();
             for (int i = 0; i < lines.size(); i++) {
                 records.add(toPacketRecord(fileId, lines.get(i), detailItems.size() > i ? detailItems.get(i) : "{}"));
             }
+
+            reporter.report(AnalysisProgressEvent.of("saving", "database-save", "正在保存解析结果", totalPackets, records.size(), 95));
             packetRecordRepository.saveAll(records);
+
+            reporter.report(AnalysisProgressEvent.of("summary", "summary-build", "正在生成统计结果", totalPackets, records.size(), 98));
             analysisSummaryRepository.save(buildSummary(fileId, records, featureLines));
 
             captureFile.setPacketCount((long) records.size());
@@ -69,8 +106,26 @@ public class PacketAnalysisService {
         } catch (RuntimeException e) {
             captureFile.setStatus("failed");
             captureFileRepository.save(captureFile);
+            reporter.report(AnalysisProgressEvent.error("解析失败：" + rootMessage(e)));
             throw new IllegalStateException("Failed to analyze capture file " + fileId, e);
         }
+    }
+
+    private int percent(long processedPackets, long totalPackets) {
+        if (totalPackets <= 0) {
+            return 0;
+        }
+        long value = Math.round((processedPackets * 100.0) / totalPackets);
+        return (int) Math.max(0, Math.min(100, value));
+    }
+
+    private String rootMessage(Throwable throwable) {
+        Throwable current = throwable;
+        while (current.getCause() != null) {
+            current = current.getCause();
+        }
+        String message = current.getMessage();
+        return message == null || message.isBlank() ? current.getClass().getSimpleName() : message;
     }
 
     private PacketRecord toPacketRecord(Long fileId, String line, String detailJson) {

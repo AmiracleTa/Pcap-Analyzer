@@ -29,6 +29,10 @@ export function analyzeFile(id) {
   })
 }
 
+export function createAnalyzeEventSource(id) {
+  return new EventSource(`/api/files/${id}/analyze/events`)
+}
+
 export function listPackets(fileId) {
   return apiFetch(`/api/files/${fileId}/packets`)
 }

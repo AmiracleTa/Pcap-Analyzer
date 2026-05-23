@@ -95,7 +95,7 @@ button {
 }
 
 button:disabled {
-  cursor: not-allowed;
+  cursor: default;
   opacity: 0.58;
 }
 
@@ -249,6 +249,38 @@ button:disabled {
   min-height: 34px;
   padding: 0 14px;
   font-size: 0.9rem;
+}
+
+.analysis-progress-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.progress-track {
+  position: relative;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 72%, transparent);
+}
+
+.progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--blue), var(--cyan));
+  transition: width 160ms ease;
+}
+
+.progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted-strong);
+  font-size: 0.9rem;
+  flex-wrap: wrap;
 }
 
 .primary-button:hover,
@@ -1088,6 +1120,36 @@ tr:last-child td {
 .stats-table th,
 .stats-table td {
   overflow-wrap: anywhere;
+}
+
+.http-record-table {
+  min-width: 960px;
+}
+
+.http-record-table th,
+.http-record-table td {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.http-record-table .http-truncate-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.http-record-table th:nth-child(1),
+.http-record-table td:nth-child(1) {
+  width: 88px;
+}
+
+.http-record-table th:nth-child(2),
+.http-record-table td:nth-child(2) {
+  width: 112px;
+}
+
+.http-record-table th:nth-child(3),
+.http-record-table td:nth-child(3) {
+  width: 88px;
 }
 
 .feature-grid .stats-table {

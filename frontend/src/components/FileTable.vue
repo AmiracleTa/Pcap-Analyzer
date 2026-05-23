@@ -1,10 +1,18 @@
 <script setup>
 import { BarChart3, Download, Eye, Trash2 } from '@lucide/vue'
 
-defineProps({
+const props = defineProps({
   files: {
     type: Array,
     default: () => [],
+  },
+  analyzingFileId: {
+    type: Number,
+    default: null,
+  },
+  deletingFileId: {
+    type: Number,
+    default: null,
   },
 })
 
@@ -51,51 +59,52 @@ function formatDateTime(value) {
   return raw.replace('T', ' ').replace(/\.\d+$/, '')
 }
 
-function statusText(status) {
-  const map = {
-    uploaded: '待分析',
-    analyzing: '分析中',
-    analyzed: '已解析',
-    failed: '解析失败',
+function analyzeButtonText(file) {
+  if (props.analyzingFileId === file.id) {
+    return '分析中'
   }
-  return map[status] || status || '-'
+  return file.status === 'analyzed' ? '已分析' : '分析'
 }
 
-function analyzeButtonText(file) {
-  return file.status === 'analyzed' ? '重新分析' : '分析'
+function deleteButtonText(file) {
+  return props.deletingFileId === file.id ? '删除中' : '删除'
 }
 </script>
 
 <template>
-  <div v-if="files.length === 0" class="empty compact">暂无上传文件</div>
+  <div v-if="props.files.length === 0" class="empty compact">暂无上传文件</div>
   <div v-else class="table-wrap elevated-table">
     <table>
       <thead>
         <tr>
-          <th>ID</th>
+          <th>序号</th>
           <th>文件名</th>
           <th>大小</th>
           <th>类型</th>
           <th>上传时间</th>
-          <th>状态</th>
           <th>操作</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="file in files" :key="file.id">
-          <td>{{ file.id }}</td>
+        <tr v-for="(file, index) in props.files" :key="file.id">
+          <td>{{ index + 1 }}</td>
           <td>{{ file.originalName }}</td>
           <td>{{ formatSize(file.fileSize) }}</td>
           <td>{{ file.fileType }}</td>
           <td>{{ formatDateTime(file.uploadTime) }}</td>
-          <td><span class="badge">{{ statusText(file.status) }}</span></td>
           <td>
             <div class="actions">
               <button class="ghost-button" type="button" @click="$emit('select', file)">
                 <Eye :size="16" aria-hidden="true" />
                 查看
               </button>
-              <button class="primary-button small" type="button" @click="$emit('analyze', file)">
+              <button
+                class="primary-button small"
+                :class="{ 'analyzed-button': file.status === 'analyzed' }"
+                type="button"
+                :disabled="props.analyzingFileId === file.id || file.status === 'analyzed'"
+                @click="$emit('analyze', file)"
+              >
                 <BarChart3 :size="16" aria-hidden="true" />
                 {{ analyzeButtonText(file) }}
               </button>
@@ -103,9 +112,14 @@ function analyzeButtonText(file) {
                 <Download :size="16" aria-hidden="true" />
                 下载
               </button>
-              <button class="danger-button" type="button" @click="$emit('delete', file)">
+              <button
+                class="danger-button"
+                type="button"
+                :disabled="props.deletingFileId === file.id"
+                @click="$emit('delete', file)"
+              >
                 <Trash2 :size="16" aria-hidden="true" />
-                删除
+                {{ deleteButtonText(file) }}
               </button>
             </div>
           </td>

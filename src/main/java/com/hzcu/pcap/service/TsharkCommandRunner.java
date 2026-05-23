@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -15,15 +17,37 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 public class TsharkCommandRunner {
 
-    private static final Duration TIMEOUT = Duration.ofSeconds(60);
+    private static final Duration TIMEOUT = Duration.ofMinutes(10);
+    private static final Pattern PACKET_COUNT_PATTERN = Pattern.compile("(?m)^\\s*Number of packets:\\s*(\\d+)\\s*$");
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    public long countPackets(Path capturePath) {
+        String output = runCommand(packetCountCommand(capturePath));
+        return parsePacketCount(output);
+    }
+
+    List<String> packetCountCommand(Path capturePath) {
+        return List.of("capinfos", "-M", "-c", capturePath.toString());
+    }
+
     public List<String> readPacketFieldLines(Path capturePath) {
-        String output = runCommand(List.of(
+        return readPacketFieldLines(capturePath, line -> {
+        });
+    }
+
+    public List<String> readPacketFieldLines(Path capturePath, Consumer<String> lineConsumer) {
+        return runLineCommand(packetFieldCommand(capturePath), lineConsumer);
+    }
+
+    private List<String> packetFieldCommand(Path capturePath) {
+        return List.of(
                 "tshark",
                 "-n",
                 "-r",
@@ -62,8 +86,7 @@ public class TsharkCommandRunner {
                 "frame.len",
                 "-e",
                 "_ws.col.Info"
-        ));
-        return output.lines().filter(line -> !line.isBlank()).toList();
+        );
     }
 
     public List<String> readPacketDetailJsonItems(Path capturePath) {
@@ -134,6 +157,50 @@ public class TsharkCommandRunner {
         return runCommand(List.of("tshark", "-v"));
     }
 
+    long parsePacketCount(String output) {
+        Matcher matcher = PACKET_COUNT_PATTERN.matcher(output == null ? "" : output);
+        if (matcher.find()) {
+            return Long.parseLong(matcher.group(1));
+        }
+        throw new IllegalStateException("capinfos did not return a valid packet count: " + output);
+    }
+
+    private List<String> runLineCommand(List<String> command, Consumer<String> lineConsumer) {
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
+        try {
+            Process process = processBuilder.start();
+            CompletableFuture<String> stderrFuture = readStreamAsync(process.getErrorStream());
+            List<String> lines = new ArrayList<>();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (!line.isBlank()) {
+                        lines.add(line);
+                        lineConsumer.accept(line);
+                    }
+                }
+            }
+            boolean completed = process.waitFor(TIMEOUT.toSeconds(), TimeUnit.SECONDS);
+            if (!completed) {
+                process.destroyForcibly();
+                stderrFuture.cancel(true);
+                throw new IllegalStateException(command.get(0) + " command timed out after " + TIMEOUT.toSeconds() + " seconds: " + String.join(" ", command));
+            }
+            String stderr = stderrFuture.get();
+            if (process.exitValue() != 0) {
+                throw new IllegalStateException(command.get(0) + " command failed: " + stderr);
+            }
+            return lines;
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to execute " + command.get(0) + " command", e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException("Failed to read " + command.get(0) + " command output", e.getCause());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while executing " + command.get(0) + " command", e);
+        }
+    }
+
     private String runCommand(List<String> command) {
         ProcessBuilder processBuilder = new ProcessBuilder(command);
         try {
@@ -145,21 +212,21 @@ public class TsharkCommandRunner {
                 process.destroyForcibly();
                 stdoutFuture.cancel(true);
                 stderrFuture.cancel(true);
-                throw new IllegalStateException("tshark command timed out after 60 seconds: " + String.join(" ", command));
+                throw new IllegalStateException(command.get(0) + " command timed out after " + TIMEOUT.toSeconds() + " seconds: " + String.join(" ", command));
             }
             String stdout = stdoutFuture.get();
             String stderr = stderrFuture.get();
             if (process.exitValue() != 0) {
-                throw new IllegalStateException("tshark command failed: " + stderr);
+                throw new IllegalStateException(command.get(0) + " command failed: " + stderr);
             }
             return stdout;
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to execute tshark command", e);
+            throw new IllegalStateException("Failed to execute " + command.get(0) + " command", e);
         } catch (ExecutionException e) {
-            throw new IllegalStateException("Failed to read tshark command output", e.getCause());
+            throw new IllegalStateException("Failed to read " + command.get(0) + " command output", e.getCause());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while executing tshark command", e);
+            throw new IllegalStateException("Interrupted while executing " + command.get(0) + " command", e);
         }
     }
 

@@ -43,23 +43,23 @@ function dnsAnswerText(value) {
       <h3>HTTP 记录</h3>
       <div v-if="(summary.httpRecords || []).length === 0" class="empty compact">暂无数据</div>
       <div v-else class="table-wrap elevated-table">
-        <table class="stats-table">
+        <table class="stats-table http-record-table">
           <thead>
             <tr>
               <th>包序号</th>
               <th>方法</th>
-              <th>主机</th>
-              <th>URI</th>
               <th>响应码</th>
+              <th>URI</th>
+              <th>主机</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="record in summary.httpRecords" :key="`http-${record.packetNo}-${record.method}-${record.host}-${record.uri}-${record.responseCode}`">
               <td>{{ record.packetNo }}</td>
               <td>{{ record.method }}</td>
-              <td>{{ record.host }}</td>
-              <td>{{ record.uri }}</td>
               <td>{{ record.responseCode }}</td>
+              <td class="http-truncate-cell" :title="record.uri">{{ record.uri }}</td>
+              <td class="http-truncate-cell" :title="record.host">{{ record.host }}</td>
             </tr>
           </tbody>
         </table>

@@ -23,16 +23,16 @@ defineEmits(['select-sample-section'])
           </h1>
         </div>
         <p class="hero-copy">
-          上传 pcap/pcapng 抓包文件，调用 tshark 完成解析，并用图表、表格和协议特征展示网络通信过程。
+          在线 PCAP 数据包分析平台，支持深度协议解析与流量可视化
         </p>
         <div class="hero-actions">
           <button class="primary-button" type="button" @click="$emit('select-sample-section')">
             <UploadCloud :size="18" aria-hidden="true" />
             上传抓包文件
           </button>
-          <a class="secondary-button" href="#analysis">
+          <a class="secondary-button" href="#features">
             <ArrowDown :size="18" aria-hidden="true" />
-            查看解析结果
+            查看功能特性
           </a>
         </div>
       </div>

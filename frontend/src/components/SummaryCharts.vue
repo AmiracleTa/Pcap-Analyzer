@@ -31,6 +31,33 @@ function trendData() {
   return props.summary?.trafficTrend || []
 }
 
+function trendDate(value) {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+  const raw = String(value).trim()
+  const numeric = Number(raw)
+  if (Number.isFinite(numeric)) {
+    return new Date(numeric * 1000)
+  }
+  const parsed = new Date(raw)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function pad(value) {
+  return String(value).padStart(2, '0')
+}
+
+function formatTrendTime(value, compact = true) {
+  const date = trendDate(value)
+  if (!date) {
+    return String(value || '')
+  }
+  const monthDay = `${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+  const time = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  return compact ? time : `${date.getFullYear()}-${monthDay} ${time}`
+}
+
 function lengthData() {
   return props.summary?.lengthDistribution || []
 }
@@ -88,8 +115,25 @@ function renderCharts() {
       top: 'middle',
       textStyle: { color: '#667085', fontSize: 14, fontWeight: 400 },
     },
-    tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: trend.map((item) => item.time || '') },
+    tooltip: {
+      trigger: 'axis',
+      formatter(params) {
+        const item = params?.[0]
+        if (!item) {
+          return ''
+        }
+        return `${formatTrendTime(trend[item.dataIndex]?.time, false)}<br/>流量: ${item.value}`
+      },
+    },
+    xAxis: {
+      type: 'category',
+      data: trend.map((item) => item.time || ''),
+      axisLabel: {
+        formatter(value) {
+          return formatTrendTime(value)
+        },
+      },
+    },
     yAxis: { type: 'value' },
     series: [
       {

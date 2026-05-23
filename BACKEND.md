@@ -77,7 +77,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: ${SHOW_SQL:false}
   servlet:
     multipart:
       max-file-size: 100MB
@@ -96,6 +96,7 @@ app:
 | `spring.datasource.username` | MySQL 用户名，默认 `root` |
 | `spring.datasource.password` | MySQL 密码，默认 `mysql123123` |
 | `spring.jpa.hibernate.ddl-auto` | 当前为 `update`，应用启动时自动同步实体表结构 |
+| `spring.jpa.show-sql` | 默认关闭 SQL 明细打印；如需调试可设置环境变量 `SHOW_SQL=true` |
 | `spring.servlet.multipart.max-file-size` | 单文件上传上限，当前为 `100MB` |
 | `app.upload-dir` | 抓包文件保存目录，当前为 `uploads` |
 
