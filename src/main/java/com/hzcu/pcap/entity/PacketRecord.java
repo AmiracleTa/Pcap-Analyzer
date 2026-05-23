@@ -21,6 +21,7 @@ public class PacketRecord {
     private Integer destinationPort;
     private String protocol;
     private Integer length;
+    @Lob
     private String info;
     @Lob
     private String detailJson;

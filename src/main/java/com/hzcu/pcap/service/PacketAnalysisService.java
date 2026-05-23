@@ -21,6 +21,8 @@ import java.util.Map;
 @Service
 public class PacketAnalysisService {
 
+    private static final int DETAIL_PACKET_LIMIT = 200;
+
     private final FileStorageService fileStorageService;
     private final CaptureFileRepository captureFileRepository;
     private final PacketRecordRepository packetRecordRepository;
@@ -51,7 +53,7 @@ public class PacketAnalysisService {
             analysisSummaryRepository.deleteByFileId(fileId);
 
             List<String> lines = tsharkCommandRunner.readPacketFieldLines(capturePath);
-            List<String> detailItems = tsharkCommandRunner.readPacketDetailJsonItems(capturePath);
+            List<String> detailItems = tsharkCommandRunner.readPacketDetailJsonItems(capturePath, DETAIL_PACKET_LIMIT);
             List<String> featureLines = tsharkCommandRunner.readProtocolFeatureLines(capturePath);
             List<PacketRecord> records = new ArrayList<>();
             for (int i = 0; i < lines.size(); i++) {

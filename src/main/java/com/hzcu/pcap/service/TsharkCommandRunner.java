@@ -67,15 +67,23 @@ public class TsharkCommandRunner {
     }
 
     public List<String> readPacketDetailJsonItems(Path capturePath) {
-        String output = runCommand(List.of(
+        return readPacketDetailJsonItems(capturePath, 0);
+    }
+
+    public List<String> readPacketDetailJsonItems(Path capturePath, int packetLimit) {
+        List<String> command = new ArrayList<>(List.of(
                 "tshark",
                 "-n",
                 "-r",
                 capturePath.toString(),
                 "-T",
-                "json",
-                "-x"
+                "json"
         ));
+        if (packetLimit > 0) {
+            command.add("-c");
+            command.add(String.valueOf(packetLimit));
+        }
+        String output = runCommand(command);
         try {
             JsonNode root = objectMapper.readTree(output);
             List<String> items = new ArrayList<>();

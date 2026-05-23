@@ -15,6 +15,9 @@
   --rose: #f43f5e;
   --shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
   --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.06);
+  --hero-bg: #ffffff;
+  --hero-glow-strong: rgba(29, 139, 255, 0.05);
+  --hero-glow-soft: rgba(29, 139, 255, 0.02);
   --radius: 8px;
   --surface: var(--panel);
   --surface-muted: var(--panel-soft);
@@ -44,6 +47,9 @@
   --line-strong: rgba(248, 250, 252, 0.2);
   --shadow: 0 18px 60px rgba(0, 0, 0, 0.42);
   --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.34);
+  --hero-bg: #05070b;
+  --hero-glow-strong: rgba(56, 189, 248, 0.16);
+  --hero-glow-soft: rgba(29, 139, 255, 0.08);
 }
 
 * {
@@ -315,7 +321,7 @@ button:disabled {
   place-items: center;
   overflow: hidden;
   scroll-margin-top: 0;
-  background: #fff;
+  background: var(--hero-bg);
 }
 
 .hero-field {
@@ -333,7 +339,7 @@ button:disabled {
   aspect-ratio: 1;
   border-radius: 999px;
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(29, 139, 255, 0.05) 0%, rgba(29, 139, 255, 0.02) 38%, rgba(29, 139, 255, 0) 72%);
+  background: radial-gradient(circle, var(--hero-glow-strong) 0%, var(--hero-glow-soft) 38%, rgba(29, 139, 255, 0) 72%);
   filter: blur(10px);
 }
 

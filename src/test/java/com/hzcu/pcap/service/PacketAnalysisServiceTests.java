@@ -8,9 +8,11 @@ import com.hzcu.pcap.entity.PacketRecord;
 import com.hzcu.pcap.repository.AnalysisSummaryRepository;
 import com.hzcu.pcap.repository.CaptureFileRepository;
 import com.hzcu.pcap.repository.PacketRecordRepository;
+import jakarta.persistence.Lob;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -101,6 +103,48 @@ class PacketAnalysisServiceTests {
         assertThat(summary.getEndTimeText()).isEqualTo("1716260001.300000");
     }
 
+    @Test
+    void analyzeCapsDetailJsonExtraction() {
+        CaptureFile captureFile = new CaptureFile();
+        captureFile.setId(9L);
+        captureFile.setStoredName("sample.pcapng");
+        captureFile.setPacketCount(0L);
+        captureFile.setStatus("uploaded");
+
+        FileStorageService fileStorageService = mock(FileStorageService.class);
+        CaptureFileRepository captureFileRepository = mock(CaptureFileRepository.class);
+        PacketRecordRepository packetRecordRepository = mock(PacketRecordRepository.class);
+        AnalysisSummaryRepository analysisSummaryRepository = mock(AnalysisSummaryRepository.class);
+        ObjectMapper objectMapper = new ObjectMapper();
+        LimitAwareTsharkCommandRunner tsharkCommandRunner = new LimitAwareTsharkCommandRunner();
+
+        when(fileStorageService.getFile(9L)).thenReturn(captureFile);
+        when(fileStorageService.getDownloadPath(9L)).thenReturn(Path.of("sample.pcapng"));
+        when(packetRecordRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(captureFileRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(analysisSummaryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        PacketAnalysisService service = new PacketAnalysisService(
+                fileStorageService,
+                captureFileRepository,
+                packetRecordRepository,
+                analysisSummaryRepository,
+                tsharkCommandRunner,
+                objectMapper
+        );
+
+        service.analyze(9L);
+
+        assertThat(tsharkCommandRunner.detailLimit).isBetween(1, 500);
+    }
+
+    @Test
+    void packetInfoSupportsLongTsharkDescriptions() throws Exception {
+        Field infoField = PacketRecord.class.getDeclaredField("info");
+
+        assertThat(infoField.getAnnotation(Lob.class)).isNotNull();
+    }
+
     private List<PacketRecord> stream(Iterable<PacketRecord> records) {
         return java.util.stream.StreamSupport.stream(records.spliterator(), false).toList();
     }
@@ -121,12 +165,40 @@ class PacketAnalysisServiceTests {
         }
 
         @Override
+        public List<String> readPacketDetailJsonItems(Path capturePath, int packetLimit) {
+            return readPacketDetailJsonItems(capturePath);
+        }
+
+        @Override
         public List<String> readProtocolFeatureLines(Path capturePath) {
             return List.of(
                     "1\texample.com\t93.184.216.34\t\t\t\t",
                     "2\t\t\tGET\texample.com\t/index.html\t",
                     "3\t\t\t\t\t\t200"
             );
+        }
+    }
+
+    static class LimitAwareTsharkCommandRunner extends TsharkCommandRunner {
+        int detailLimit = -1;
+
+        @Override
+        public List<String> readPacketFieldLines(Path capturePath) {
+            return List.of(
+                    "1\t1716260000.100000\t192.168.1.2\t\t93.184.216.34\t\t51514\t\t443\t\tTLS\t128\tClient Hello",
+                    "2\t1716260001.200000\t93.184.216.34\t\t192.168.1.2\t\t443\t\t51514\t\tTLS\t256\tServer Hello"
+            );
+        }
+
+        @Override
+        public List<String> readPacketDetailJsonItems(Path capturePath, int packetLimit) {
+            detailLimit = packetLimit;
+            return List.of("{\"layers\":{\"frame\":{\"frame.number\":\"1\"}}}");
+        }
+
+        @Override
+        public List<String> readProtocolFeatureLines(Path capturePath) {
+            return List.of();
         }
     }
 }
