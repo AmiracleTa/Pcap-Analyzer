@@ -21,6 +21,14 @@ const timeEndRatio = ref(100)
 const pageSize = ref(25)
 const currentPage = ref(1)
 const selectedPacketId = ref(null)
+const suppressFocusTooltip = ref(false)
+const packetTooltip = ref({
+  visible: false,
+  title: '',
+  text: '',
+  x: 0,
+  y: 0,
+})
 const pageSizeOptions = [25, 50, 100]
 
 const protocolOptions = computed(() => {
@@ -225,6 +233,68 @@ function selectPacket(packet) {
   selectedPacketId.value = packet.id
   emit('select', packet)
 }
+
+function markPointerFocus() {
+  suppressFocusTooltip.value = true
+  window.setTimeout(() => {
+    suppressFocusTooltip.value = false
+  }, 0)
+}
+
+function handlePacketFocus(packet, event) {
+  if (suppressFocusTooltip.value) {
+    return
+  }
+  showPacketTooltip(packet, event)
+}
+
+function packetTooltipText(packet) {
+  return packet.info || '无摘要'
+}
+
+function showPacketTooltip(packet, event) {
+  showTooltip('数据包摘要', packetTooltipText(packet), event)
+}
+
+function showTooltip(title, text, event) {
+  const position = packetTooltipPosition(event)
+  packetTooltip.value = {
+    visible: true,
+    title,
+    text: text || '-',
+    x: position.x,
+    y: position.y,
+  }
+}
+
+function movePacketTooltip(event) {
+  if (!packetTooltip.value.visible) {
+    return
+  }
+  const position = packetTooltipPosition(event)
+  packetTooltip.value = {
+    ...packetTooltip.value,
+    x: position.x,
+    y: position.y,
+  }
+}
+
+function hidePacketTooltip() {
+  packetTooltip.value = {
+    ...packetTooltip.value,
+    visible: false,
+  }
+}
+
+function packetTooltipPosition(event) {
+  const rect = event.currentTarget?.getBoundingClientRect?.()
+  const baseX = Number.isFinite(event.clientX) && event.clientX > 0 ? event.clientX : rect?.left || 0
+  const baseY = Number.isFinite(event.clientY) && event.clientY > 0 ? event.clientY : rect?.top || 0
+  return {
+    x: Math.max(12, Math.min(baseX + 14, window.innerWidth - 540)),
+    y: Math.max(12, Math.min(baseY + 14, window.innerHeight - 90)),
+  }
+}
 </script>
 
 <template>
@@ -295,23 +365,66 @@ function selectPacket(packet) {
             v-for="packet in pagedPackets"
             :key="packet.id"
             :class="{ selected: selectedPacketId === packet.id }"
-            :title="packet.info || '无摘要'"
+            class="packet-row"
+            tabindex="0"
+            @pointerdown="markPointerFocus"
             @click="selectPacket(packet)"
+            @focus="handlePacketFocus(packet, $event)"
+            @mouseenter="showPacketTooltip(packet, $event)"
+            @mousemove="movePacketTooltip"
+            @blur="hidePacketTooltip"
+            @mouseleave="hidePacketTooltip"
           >
-            <td>{{ packet.packetNo }}</td>
-            <td :title="packet.timestampText">{{ formatTimestamp(packet.timestampText) }}</td>
-            <td :title="endpoint(packet.sourceIp, packet.sourcePort)">{{ packet.sourceIp || '-' }}</td>
-            <td :title="endpoint(packet.destinationIp, packet.destinationPort)">
+            <td
+              @mouseenter.stop="showPacketTooltip(packet, $event)"
+              @mousemove.stop="movePacketTooltip"
+            >
+              {{ packet.packetNo }}
+            </td>
+            <td
+              @mouseenter.stop="showTooltip('时间戳', packet.timestampText || '-', $event)"
+              @mousemove.stop="movePacketTooltip"
+            >
+              {{ formatTimestamp(packet.timestampText) }}
+            </td>
+            <td
+              @mouseenter.stop="showTooltip('源 IP', endpoint(packet.sourceIp, packet.sourcePort), $event)"
+              @mousemove.stop="movePacketTooltip"
+            >
+              {{ packet.sourceIp || '-' }}
+            </td>
+            <td
+              @mouseenter.stop="showTooltip('目的 IP', endpoint(packet.destinationIp, packet.destinationPort), $event)"
+              @mousemove.stop="movePacketTooltip"
+            >
               {{ packet.destinationIp || '-' }}
             </td>
-            <td>{{ packet.sourcePort ?? '-' }}</td>
-            <td>{{ packet.destinationPort ?? '-' }}</td>
-            <td>
+            <td
+              @mouseenter.stop="showTooltip('源 IP', endpoint(packet.sourceIp, packet.sourcePort), $event)"
+              @mousemove.stop="movePacketTooltip"
+            >
+              {{ packet.sourcePort ?? '-' }}
+            </td>
+            <td
+              @mouseenter.stop="showTooltip('目的 IP', endpoint(packet.destinationIp, packet.destinationPort), $event)"
+              @mousemove.stop="movePacketTooltip"
+            >
+              {{ packet.destinationPort ?? '-' }}
+            </td>
+            <td
+              @mouseenter.stop="showPacketTooltip(packet, $event)"
+              @mousemove.stop="movePacketTooltip"
+            >
               <span class="protocol-pill" :class="protocolClass(packet.protocol)">
                 {{ packet.protocol || '-' }}
               </span>
             </td>
-            <td>{{ packet.length }}</td>
+            <td
+              @mouseenter.stop="showPacketTooltip(packet, $event)"
+              @mousemove.stop="movePacketTooltip"
+            >
+              {{ packet.length }}
+            </td>
           </tr>
         </tbody>
       </table>
@@ -326,6 +439,15 @@ function selectPacket(packet) {
       <button class="ghost-button" type="button" :disabled="currentPage === 1" @click="currentPage -= 1">上一页</button>
       <span class="badge">{{ currentPage }} / {{ totalPages }}</span>
       <button class="ghost-button" type="button" :disabled="currentPage === totalPages" @click="currentPage += 1">下一页</button>
+    </div>
+    <div
+      v-if="packetTooltip.visible"
+      class="packet-hover-tooltip"
+      :style="{ left: `${packetTooltip.x}px`, top: `${packetTooltip.y}px` }"
+      role="tooltip"
+    >
+      <strong>{{ packetTooltip.title }}</strong>
+      <span>{{ packetTooltip.text }}</span>
     </div>
   </div>
 </template>

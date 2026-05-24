@@ -11,6 +11,7 @@ const selectedFile = ref(null)
 const files = ref([])
 const health = ref('checking')
 const message = ref('')
+const messageTone = ref('neutral')
 const dark = ref(false)
 const menuOpen = ref(false)
 const scrolled = ref(false)
@@ -19,6 +20,7 @@ const analyzingFileId = ref(null)
 const deletingFileId = ref(null)
 let revealObserver = null
 let analysisEventSource = null
+let messageTimer = null
 
 function toggleDark() {
   dark.value = !dark.value
@@ -61,6 +63,25 @@ function closeAnalysisEventSource() {
   }
 }
 
+function clearMessageTimer() {
+  if (messageTimer) {
+    window.clearTimeout(messageTimer)
+    messageTimer = null
+  }
+}
+
+function showMessage(text, duration = 3200, tone = 'neutral') {
+  clearMessageTimer()
+  message.value = text
+  messageTone.value = tone
+  if (duration > 0) {
+    messageTimer = window.setTimeout(() => {
+      message.value = ''
+      messageTimer = null
+    }, duration)
+  }
+}
+
 function scrollToSection(id) {
   document.getElementById(id)?.scrollIntoView({ block: 'start', behavior: 'smooth' })
   menuOpen.value = false
@@ -88,15 +109,20 @@ async function loadFiles() {
 
 async function refresh() {
   message.value = ''
+  clearMessageTimer()
   await Promise.all([loadHealth(), loadFiles()])
 }
 
 async function handleUploaded(file) {
-  message.value = `已上传 ${file.originalName}`
+  showMessage(`${file.originalName} 已上传`, 3200, 'success')
   await loadFiles()
 }
 
 function handleSelectFile(file) {
+  if (file.status !== 'analyzed') {
+    showMessage('请先分析该文件，再查看解析结果', 3600)
+    return
+  }
   selectedFile.value = file
   queueReveal()
   scrollToSection('analysis')
@@ -114,7 +140,7 @@ function handleAnalyze(file) {
     percent: 0,
     packetCount: null,
   }
-  message.value = `开始分析 ${file.originalName}`
+  showMessage(`开始分析 ${file.originalName}`, 2400)
   scrollToAnalysisProgress()
 
   const source = createAnalyzeEventSource(file.id)
@@ -127,17 +153,15 @@ function handleAnalyze(file) {
     if (payload.status === 'done') {
       closeAnalysisEventSource()
       analyzingFileId.value = null
-      message.value = `分析完成，数据包数量：${payload.packetCount ?? payload.processedPackets ?? 0}`
-      const updatedFiles = await loadFiles()
-      selectedFile.value = updatedFiles.find((item) => item.id === file.id) || file
+      showMessage(`分析完成，数据包数量：${payload.packetCount ?? payload.processedPackets ?? 0}`, 4200, 'success')
+      await loadFiles()
       queueReveal()
-      scrollToSection('analysis')
     }
 
     if (payload.status === 'error') {
       closeAnalysisEventSource()
       analyzingFileId.value = null
-      message.value = payload.message || '解析失败'
+      showMessage(payload.message || '解析失败', 4200)
       await loadFiles()
     }
   })
@@ -148,23 +172,23 @@ function handleAnalyze(file) {
     }
     closeAnalysisEventSource()
     analyzingFileId.value = null
-    message.value = '分析连接中断，请重新点击分析'
+    showMessage('分析连接中断，请重新点击分析', 4200)
     await loadFiles()
   }
 }
 
 async function handleDelete(file) {
   deletingFileId.value = file.id
-  message.value = `正在删除 ${file.originalName}`
+  showMessage(`正在删除 ${file.originalName}`, 1800)
   try {
     await deleteFile(file.id)
-    message.value = `已删除 ${file.originalName}`
+    showMessage(`已删除 ${file.originalName}`, 3200, 'success')
     await loadFiles()
     if (selectedFile.value?.id === file.id) {
       selectedFile.value = null
     }
   } catch (error) {
-    message.value = error.message || '删除失败'
+    showMessage(error.message || '删除失败', 4200)
   } finally {
     deletingFileId.value = null
   }
@@ -181,6 +205,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('scroll', updateHeader)
   closeAnalysisEventSource()
   revealObserver?.disconnect()
+  clearMessageTimer()
 })
 </script>
 
@@ -194,6 +219,12 @@ onBeforeUnmount(() => {
       @toggle-dark="toggleDark"
       @toggle-menu="toggleMenu"
     />
+    <Transition name="toast">
+      <div v-if="message" class="app-toast" :class="`is-${messageTone}`" role="status" aria-live="polite">
+        <span v-if="messageTone === 'success'" class="app-toast-icon" aria-hidden="true">✓</span>
+        <span>{{ message }}</span>
+      </div>
+    </Transition>
     <main>
       <HeroSection
         @select-sample-section="scrollToSection('files')"
@@ -205,11 +236,9 @@ onBeforeUnmount(() => {
         <FilePage
           :files="files"
           :health="health"
-          :message="message"
           :analysis-progress="analysisProgress"
           :analyzing-file-id="analyzingFileId"
           :deleting-file-id="deletingFileId"
-          @refresh="refresh"
           @uploaded="handleUploaded"
           @select-file="handleSelectFile"
           @analyze="handleAnalyze"

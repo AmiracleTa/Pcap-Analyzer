@@ -56,8 +56,8 @@ function dnsAnswerText(value) {
           <tbody>
             <tr v-for="record in summary.httpRecords" :key="`http-${record.packetNo}-${record.method}-${record.host}-${record.uri}-${record.responseCode}`">
               <td>{{ record.packetNo }}</td>
-              <td>{{ record.method }}</td>
-              <td>{{ record.responseCode }}</td>
+              <td>{{ record.method || '-' }}</td>
+              <td>{{ record.responseCode || '-' }}</td>
               <td class="http-truncate-cell" :title="record.uri">{{ record.uri }}</td>
               <td class="http-truncate-cell" :title="record.host">{{ record.host }}</td>
             </tr>
