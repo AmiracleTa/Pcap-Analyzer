@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { Download, FileJson, LoaderCircle } from '@lucide/vue'
-import { exportCsv, exportJson, getSummary, listPackets } from '../api/files'
+import { Download, FileJson } from '@lucide/vue'
+import { exportCsv, exportJson, getSecurityReport, getSummary, listPackets } from '../api/files'
+import AiSecurityReportPanel from '../components/AiSecurityReportPanel.vue'
 import PacketTable from '../components/PacketTable.vue'
 import ProtocolFeaturePanel from '../components/ProtocolFeaturePanel.vue'
 import SectionHeading from '../components/SectionHeading.vue'
@@ -14,6 +15,7 @@ const props = defineProps({
     default: null,
   },
 })
+const emit = defineEmits(['loading-change'])
 
 const summary = ref({
   protocols: {},
@@ -30,8 +32,11 @@ const summary = ref({
 })
 const packets = ref([])
 const selectedPacket = ref(null)
+const securityReport = ref(null)
+const securityReportError = ref('')
 const loading = ref(false)
 const error = ref('')
+let loadSequence = 0
 
 const fileTitle = computed(() => props.selectedFile?.originalName || '未选择文件')
 
@@ -83,26 +88,51 @@ function statusText(status) {
 }
 
 async function loadAnalysis(file) {
+  const requestId = ++loadSequence
   selectedPacket.value = null
+  securityReport.value = null
+  securityReportError.value = ''
   if (!file) {
     packets.value = []
+    loading.value = false
+    emit('loading-change', false)
     return
   }
 
   loading.value = true
+  emit('loading-change', true)
   error.value = ''
   try {
-    const [summaryResult, packetResult] = await Promise.all([
-      getSummary(file.id),
-      listPackets(file.id),
-    ])
-    summary.value = summaryResult
-    packets.value = packetResult
-  } catch (err) {
-    error.value = err.message
+    try {
+      const [summaryResult, packetResult] = await Promise.all([
+        getSummary(file.id),
+        listPackets(file.id),
+      ])
+      summary.value = summaryResult
+      packets.value = packetResult
+    } catch (err) {
+      error.value = err.message
+    }
+
+    try {
+      securityReport.value = await getSecurityReport(file.id)
+    } catch (err) {
+      securityReportError.value = friendlySecurityReportError(err)
+    }
   } finally {
-    loading.value = false
+    if (requestId === loadSequence) {
+      loading.value = false
+      emit('loading-change', false)
+    }
   }
+}
+
+function friendlySecurityReportError(err) {
+  const message = err?.message || ''
+  if (message.includes('No static resource') && message.includes('/security-report')) {
+    return 'AI 安全报告接口暂不可用，请重启后端后刷新页面。'
+  }
+  return message || 'AI 安全报告读取失败。'
 }
 
 watch(() => props.selectedFile, loadAnalysis, { immediate: true })
@@ -132,10 +162,6 @@ watch(() => props.selectedFile, loadAnalysis, { immediate: true })
               <FileJson :size="17" aria-hidden="true" />
               导出 JSON
             </button>
-            <span v-if="loading" class="badge">
-              <LoaderCircle class="spin" :size="15" aria-hidden="true" />
-              加载中
-            </span>
           </div>
         </header>
 
@@ -168,6 +194,11 @@ watch(() => props.selectedFile, loadAnalysis, { immediate: true })
         </dl>
       </div>
 
+      <div class="section-spacer"></div>
+      <AiSecurityReportPanel
+        :report="securityReport"
+        :error="securityReportError"
+      />
       <div class="section-spacer"></div>
       <SummaryCharts :summary="summary" />
       <div class="section-spacer"></div>

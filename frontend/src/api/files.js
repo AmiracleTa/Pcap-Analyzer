@@ -41,6 +41,10 @@ export function getSummary(fileId) {
   return apiFetch(`/api/files/${fileId}/summary`)
 }
 
+export function getSecurityReport(fileId) {
+  return apiFetch(`/api/files/${fileId}/security-report`)
+}
+
 export function exportCsv(fileId) {
   window.open(`/api/files/${fileId}/export/csv`, '_blank')
 }

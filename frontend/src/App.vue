@@ -18,6 +18,8 @@ const scrolled = ref(false)
 const analysisProgress = ref(null)
 const analyzingFileId = ref(null)
 const deletingFileId = ref(null)
+const locallyDeletedFileIds = ref(new Set())
+const analysisLoadingMessage = '加载中'
 let revealObserver = null
 let analysisEventSource = null
 let messageTimer = null
@@ -103,8 +105,19 @@ async function loadHealth() {
 }
 
 async function loadFiles() {
-  files.value = await listFiles()
+  const deletedIds = locallyDeletedFileIds.value
+  files.value = (await listFiles()).filter((file) => !deletedIds.has(file.id))
   return files.value
+}
+
+function addLocallyDeletedFileId(id) {
+  locallyDeletedFileIds.value = new Set([...locallyDeletedFileIds.value, id])
+}
+
+function removeLocallyDeletedFileId(id) {
+  const next = new Set(locallyDeletedFileIds.value)
+  next.delete(id)
+  locallyDeletedFileIds.value = next
 }
 
 async function refresh() {
@@ -126,6 +139,18 @@ function handleSelectFile(file) {
   selectedFile.value = file
   queueReveal()
   scrollToSection('analysis')
+}
+
+function handleAnalysisLoadingChange(isLoading) {
+  if (isLoading) {
+    showMessage(analysisLoadingMessage, 0)
+    return
+  }
+
+  if (message.value === analysisLoadingMessage) {
+    message.value = ''
+    clearMessageTimer()
+  }
 }
 
 function handleAnalyze(file) {
@@ -153,9 +178,17 @@ function handleAnalyze(file) {
     if (payload.status === 'done') {
       closeAnalysisEventSource()
       analyzingFileId.value = null
-      showMessage(`分析完成，数据包数量：${payload.packetCount ?? payload.processedPackets ?? 0}`, 4200, 'success')
-      await loadFiles()
+      const doneMessage = payload.message || `分析完成，数据包数量：${payload.packetCount ?? payload.processedPackets ?? 0}`
+      showMessage(doneMessage, 4200, payload.aiReportAvailable === false ? 'neutral' : 'success')
+      const updatedFiles = await loadFiles()
+      const updatedFile = updatedFiles.find((item) => item.id === file.id) || {
+        ...file,
+        packetCount: payload.packetCount ?? payload.processedPackets ?? file.packetCount,
+        status: 'analyzed',
+      }
+      selectedFile.value = updatedFile
       queueReveal()
+      scrollToSection('analysis')
     }
 
     if (payload.status === 'error') {
@@ -178,16 +211,21 @@ function handleAnalyze(file) {
 }
 
 async function handleDelete(file) {
+  const previousFiles = [...files.value]
+  const previousSelectedFile = selectedFile.value
   deletingFileId.value = file.id
-  showMessage(`正在删除 ${file.originalName}`, 1800)
+  addLocallyDeletedFileId(file.id)
+  files.value = files.value.filter((item) => item.id !== file.id)
+  if (selectedFile.value?.id === file.id) {
+    selectedFile.value = null
+  }
+  showMessage(`已删除 ${file.originalName}`, 3200, 'success')
   try {
     await deleteFile(file.id)
-    showMessage(`已删除 ${file.originalName}`, 3200, 'success')
-    await loadFiles()
-    if (selectedFile.value?.id === file.id) {
-      selectedFile.value = null
-    }
   } catch (error) {
+    removeLocallyDeletedFileId(file.id)
+    files.value = previousFiles
+    selectedFile.value = previousSelectedFile
     showMessage(error.message || '删除失败', 4200)
   } finally {
     deletingFileId.value = null
@@ -246,7 +284,10 @@ onBeforeUnmount(() => {
         />
       </section>
       <section id="analysis" class="section analysis-section">
-        <AnalysisPage :selected-file="selectedFile" />
+        <AnalysisPage
+          :selected-file="selectedFile"
+          @loading-change="handleAnalysisLoadingChange"
+        />
       </section>
     </main>
   </div>

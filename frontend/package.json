@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test:loading-toast": "node scripts/check-loading-toast.mjs",
+    "test:analysis-progress": "node scripts/check-analysis-progress.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

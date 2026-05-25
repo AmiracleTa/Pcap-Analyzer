@@ -1,9 +1,10 @@
 <script setup>
+import { computed } from 'vue'
 import SectionHeading from '../components/SectionHeading.vue'
 import FileTable from '../components/FileTable.vue'
 import FileUpload from '../components/FileUpload.vue'
 
-defineProps({
+const props = defineProps({
   files: { type: Array, default: () => [] },
   health: { type: String, required: true },
   analysisProgress: { type: Object, default: null },
@@ -12,6 +13,77 @@ defineProps({
 })
 
 defineEmits(['uploaded', 'select-file', 'analyze', 'delete'])
+
+const progressStages = computed(() => {
+  const progress = props.analysisProgress
+  if (!progress) {
+    return []
+  }
+  return [
+    {
+      label: '解析数据包',
+      state: parseStageState(progress),
+    },
+    {
+      label: '保存到云端',
+      state: cloudSaveStageState(progress),
+    },
+    {
+      label: '生成 AI 报告',
+      state: aiStageState(progress),
+    },
+  ]
+})
+
+const cloudSavePhases = new Set(['database-save', 'summary-build'])
+
+function parseStageState(progress) {
+  if (progress.status === 'error') {
+    return 'error'
+  }
+  if (cloudSavePhases.has(progress.phase) || progress.phase === 'ai-report' || progress.status === 'done') {
+    return 'complete'
+  }
+  return 'active'
+}
+
+function cloudSaveStageState(progress) {
+  if (progress.status === 'error') {
+    return 'pending'
+  }
+  if (progress.status === 'done') {
+    return progress.aiReportAvailable === false ? 'warning' : 'complete'
+  }
+  if (progress.phase === 'ai-report') {
+    return 'complete'
+  }
+  return cloudSavePhases.has(progress.phase) ? 'active' : 'pending'
+}
+
+function aiStageState(progress) {
+  if (progress.status === 'error') {
+    return 'pending'
+  }
+  if (progress.status === 'done') {
+    return progress.aiReportAvailable === false ? 'warning' : 'complete'
+  }
+  return progress.phase === 'ai-report' ? 'active' : 'pending'
+}
+
+function packetProgressText(progress) {
+  const count = progress.packetCount ?? progress.processedPackets ?? 0
+  const total = progress.totalPackets ?? 0
+  if (progress.status === 'error') {
+    return progress.message || '解析失败'
+  }
+  if (progress.status === 'done') {
+    return `共解析 ${count} 个数据包`
+  }
+  if (total <= 0) {
+    return '正在读取数据包总数'
+  }
+  return `已解析 ${progress.processedPackets ?? 0} / ${total} 个数据包`
+}
 </script>
 
 <template>
@@ -57,7 +129,7 @@ defineEmits(['uploaded', 'select-file', 'analyze', 'delete'])
 
       <section v-if="analysisProgress" id="analysis-progress" class="stack-panel analysis-progress-panel">
         <div class="section-header">
-          <div>
+          <div class="progress-title-block">
             <h3>解析进度</h3>
             <p class="muted">{{ analysisProgress.message }}</p>
           </div>
@@ -66,9 +138,19 @@ defineEmits(['uploaded', 'select-file', 'analyze', 'delete'])
         <div class="progress-track" aria-label="解析进度">
           <span class="progress-fill" :style="{ width: `${analysisProgress.percent}%` }"></span>
         </div>
+        <div class="progress-stage-list" aria-label="解析阶段">
+          <span
+            v-for="stage in progressStages"
+            :key="stage.label"
+            class="progress-stage"
+            :class="`is-${stage.state}`"
+          >
+            <span class="progress-stage-dot" aria-hidden="true"></span>
+            {{ stage.label }}
+          </span>
+        </div>
         <div class="progress-meta">
-          <span>已解析 {{ analysisProgress.processedPackets }} / {{ analysisProgress.totalPackets }} 个数据包</span>
-          <span>{{ analysisProgress.phase }}</span>
+          <span>{{ packetProgressText(analysisProgress) }}</span>
         </div>
       </section>
     </div>
