@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="760" viewBox="0 0 1180 760" role="img" aria-labelledby="title desc">
+  <title id="title">pcap-analyzer 核心业务流程</title>
+  <desc id="desc">展示从用户上传抓包、后端保存、tshark 解析、数据库落库、AI 报告生成到前端展示和导出的主流程。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#52606d"/>
+    </marker>
+    <filter id="shadow" x="-8%" y="-8%" width="116%" height="124%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#152238" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      text { font-family: "Microsoft YaHei", "Noto Sans CJK SC", Arial, sans-serif; fill: #172033; }
+      .title { font-size: 30px; font-weight: 700; }
+      .subtitle { font-size: 15px; fill: #52606d; }
+      .lane { fill: #ffffff; stroke: #dde4ee; stroke-width: 1.5; }
+      .lane-title { font-size: 16px; font-weight: 700; fill: #52606d; }
+      .node { fill: #ffffff; stroke-width: 2; filter: url(#shadow); }
+      .node-title { font-size: 17px; font-weight: 700; }
+      .node-text { font-size: 12px; fill: #52606d; }
+      .arrow { stroke: #52606d; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .dash { stroke: #8492a6; stroke-width: 2; stroke-dasharray: 7 7; fill: none; marker-end: url(#arrow); }
+      .badge { font-size: 12px; font-weight: 700; fill: #ffffff; }
+    </style>
+  </defs>
+
+  <rect width="1180" height="760" fill="#f6f8fb"/>
+  <text x="54" y="58" class="title">核心业务流程</text>
+  <text x="54" y="86" class="subtitle">一次抓包分析从上传到结果展示的完整链路。</text>
+
+  <rect x="54" y="125" width="1072" height="116" rx="16" class="lane"/>
+  <rect x="54" y="275" width="1072" height="188" rx="16" class="lane"/>
+  <rect x="54" y="497" width="1072" height="132" rx="16" class="lane"/>
+  <text x="78" y="156" class="lane-title">浏览器前端</text>
+  <text x="78" y="306" class="lane-title">Spring Boot 后端</text>
+  <text x="78" y="528" class="lane-title">存储与外部能力</text>
+
+  <g>
+    <rect x="184" y="151" width="148" height="64" rx="12" class="node" stroke="#1d8bff"/>
+    <text x="258" y="176" text-anchor="middle" class="node-title">上传抓包</text>
+    <text x="258" y="198" text-anchor="middle" class="node-text">pcap / pcapng / cap</text>
+  </g>
+  <g>
+    <rect x="474" y="151" width="148" height="64" rx="12" class="node" stroke="#10b981"/>
+    <text x="548" y="176" text-anchor="middle" class="node-title">点击分析</text>
+    <text x="548" y="198" text-anchor="middle" class="node-text">建立 SSE 连接</text>
+  </g>
+  <g>
+    <rect x="818" y="151" width="164" height="64" rx="12" class="node" stroke="#8b5cf6"/>
+    <text x="900" y="176" text-anchor="middle" class="node-title">展示结果</text>
+    <text x="900" y="198" text-anchor="middle" class="node-text">图表 / 表格 / 导出</text>
+  </g>
+
+  <g>
+    <rect x="164" y="318" width="184" height="74" rx="12" class="node" stroke="#1d8bff"/>
+    <text x="256" y="345" text-anchor="middle" class="node-title">校验并保存文件</text>
+    <text x="256" y="368" text-anchor="middle" class="node-text">FileController</text>
+  </g>
+  <g>
+    <rect x="446" y="318" width="204" height="74" rx="12" class="node" stroke="#10b981"/>
+    <text x="548" y="345" text-anchor="middle" class="node-title">解析抓包</text>
+    <text x="548" y="368" text-anchor="middle" class="node-text">PacketAnalysisService</text>
+  </g>
+  <g>
+    <rect x="744" y="318" width="188" height="74" rx="12" class="node" stroke="#f59e0b"/>
+    <text x="838" y="345" text-anchor="middle" class="node-title">生成 AI 报告</text>
+    <text x="838" y="368" text-anchor="middle" class="node-text">SecurityReportService</text>
+  </g>
+  <g>
+    <rect x="744" y="408" width="188" height="40" rx="12" fill="#fff7ed" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="838" y="433" text-anchor="middle" class="node-text">风险等级、风险分数、建议</text>
+  </g>
+
+  <g>
+    <rect x="158" y="548" width="196" height="58" rx="12" class="node" stroke="#06b6d4"/>
+    <text x="256" y="572" text-anchor="middle" class="node-title">uploads/</text>
+    <text x="256" y="592" text-anchor="middle" class="node-text">原始抓包文件</text>
+  </g>
+  <g>
+    <rect x="430" y="548" width="236" height="58" rx="12" class="node" stroke="#8b5cf6"/>
+    <text x="548" y="572" text-anchor="middle" class="node-title">MySQL</text>
+    <text x="548" y="592" text-anchor="middle" class="node-text">文件、数据包、统计、报告</text>
+  </g>
+  <g>
+    <rect x="742" y="548" width="192" height="58" rx="12" class="node" stroke="#f43f5e"/>
+    <text x="838" y="572" text-anchor="middle" class="node-title">外部工具 / AI</text>
+    <text x="838" y="592" text-anchor="middle" class="node-text">capinfos、tshark、AI API</text>
+  </g>
+
+  <path class="arrow" d="M332 183 L474 183"/>
+  <path class="arrow" d="M622 183 L818 183"/>
+  <path class="arrow" d="M258 215 C258 252, 256 280, 256 318"/>
+  <path class="arrow" d="M332 355 L446 355"/>
+  <path class="arrow" d="M650 355 L744 355"/>
+  <path class="arrow" d="M838 392 L838 408"/>
+  <path class="arrow" d="M256 392 L256 548"/>
+  <path class="arrow" d="M548 392 L548 548"/>
+  <path class="arrow" d="M838 392 L838 548"/>
+  <path class="dash" d="M548 215 C548 250, 548 283, 548 318"/>
+  <path class="dash" d="M838 548 C1004 520, 1032 246, 982 190"/>
+  <path class="dash" d="M548 548 C724 516, 776 244, 818 190"/>
+
+  <rect x="374" y="168" width="58" height="28" rx="14" fill="#1d8bff"/>
+  <text x="403" y="187" text-anchor="middle" class="badge">POST</text>
+  <rect x="674" y="168" width="84" height="28" rx="14" fill="#10b981"/>
+  <text x="716" y="187" text-anchor="middle" class="badge">GET / POST</text>
+  <rect x="584" y="252" width="70" height="28" rx="14" fill="#8b5cf6"/>
+  <text x="619" y="271" text-anchor="middle" class="badge">SSE</text>
+</svg>

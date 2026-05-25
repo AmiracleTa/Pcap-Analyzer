@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="680" viewBox="0 0 1120 680" role="img" aria-labelledby="title desc">
+  <title id="title">pcap-analyzer 功能模块图</title>
+  <desc id="desc">展示抓包文件管理、解析任务、统计可视化、数据包明细、AI 安全报告和导出下载之间的关系。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#52606d"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#152238" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      text { font-family: "Microsoft YaHei", "Noto Sans CJK SC", Arial, sans-serif; fill: #172033; }
+      .title { font-size: 30px; font-weight: 700; }
+      .subtitle { font-size: 15px; fill: #52606d; }
+      .hub { fill: #172033; }
+      .hub-title { fill: #ffffff; font-size: 24px; font-weight: 700; }
+      .hub-sub { fill: #d8dee9; font-size: 14px; }
+      .card { fill: #ffffff; stroke-width: 2; filter: url(#shadow); }
+      .card-title { font-size: 19px; font-weight: 700; }
+      .card-text { font-size: 13px; fill: #52606d; }
+      .line { stroke: #52606d; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .chip { font-size: 12px; font-weight: 700; fill: #ffffff; }
+    </style>
+  </defs>
+
+  <rect width="1120" height="680" rx="0" fill="#f6f8fb"/>
+  <text x="56" y="62" class="title">功能模块图</text>
+  <text x="56" y="90" class="subtitle">围绕抓包文件生命周期组织核心模块。</text>
+
+  <rect x="420" y="250" width="280" height="150" rx="18" class="hub"/>
+  <text x="560" y="308" text-anchor="middle" class="hub-title">pcap-analyzer</text>
+  <text x="560" y="338" text-anchor="middle" class="hub-sub">网络协议抓包分析系统</text>
+  <text x="560" y="365" text-anchor="middle" class="hub-sub">Vue 前端 + Spring Boot 后端</text>
+
+  <path class="line" d="M420 302 C332 292, 296 238, 252 178"/>
+  <path class="line" d="M426 370 C340 402, 302 470, 252 548"/>
+  <path class="line" d="M560 250 C560 208, 560 174, 560 138"/>
+  <path class="line" d="M700 302 C790 292, 824 238, 868 178"/>
+  <path class="line" d="M696 370 C782 402, 824 470, 868 548"/>
+  <path class="line" d="M700 330 C780 330, 828 330, 884 330"/>
+
+  <g>
+    <rect x="68" y="118" width="270" height="136" rx="14" class="card" stroke="#1d8bff"/>
+    <rect x="92" y="140" width="58" height="26" rx="13" fill="#1d8bff"/>
+    <text x="121" y="158" text-anchor="middle" class="chip">文件</text>
+    <text x="92" y="196" class="card-title">抓包文件管理</text>
+    <text x="92" y="220" class="card-text">上传、列表、下载、删除</text>
+    <text x="92" y="242" class="card-text">支持 .pcap / .pcapng / .cap</text>
+  </g>
+
+  <g>
+    <rect x="425" y="54" width="270" height="136" rx="14" class="card" stroke="#10b981"/>
+    <rect x="449" y="76" width="58" height="26" rx="13" fill="#10b981"/>
+    <text x="478" y="94" text-anchor="middle" class="chip">解析</text>
+    <text x="449" y="132" class="card-title">抓包解析任务</text>
+    <text x="449" y="156" class="card-text">capinfos 计数，tshark 提取字段</text>
+    <text x="449" y="178" class="card-text">SSE 实时推送分析进度</text>
+  </g>
+
+  <g>
+    <rect x="782" y="118" width="270" height="136" rx="14" class="card" stroke="#8b5cf6"/>
+    <rect x="806" y="140" width="58" height="26" rx="13" fill="#8b5cf6"/>
+    <text x="835" y="158" text-anchor="middle" class="chip">统计</text>
+    <text x="806" y="196" class="card-title">统计可视化</text>
+    <text x="806" y="220" class="card-text">协议分布、流量趋势、长度分布</text>
+    <text x="806" y="242" class="card-text">IP / 端口 Top 与 DNS / HTTP 特征</text>
+  </g>
+
+  <g>
+    <rect x="68" y="488" width="270" height="136" rx="14" class="card" stroke="#06b6d4"/>
+    <rect x="92" y="510" width="58" height="26" rx="13" fill="#06b6d4"/>
+    <text x="121" y="528" text-anchor="middle" class="chip">明细</text>
+    <text x="92" y="566" class="card-title">数据包明细</text>
+    <text x="92" y="590" class="card-text">表格展示解析字段</text>
+    <text x="92" y="612" class="card-text">选中单包查看详情 JSON</text>
+  </g>
+
+  <g>
+    <rect x="782" y="488" width="270" height="136" rx="14" class="card" stroke="#f59e0b"/>
+    <rect x="806" y="510" width="58" height="26" rx="13" fill="#f59e0b"/>
+    <text x="835" y="528" text-anchor="middle" class="chip">AI</text>
+    <text x="806" y="566" class="card-title">AI 安全报告</text>
+    <text x="806" y="590" class="card-text">生成风险等级、风险分数</text>
+    <text x="806" y="612" class="card-text">输出风险点与处置建议</text>
+  </g>
+
+  <g>
+    <rect x="850" y="270" width="220" height="136" rx="14" class="card" stroke="#f43f5e"/>
+    <rect x="874" y="292" width="58" height="26" rx="13" fill="#f43f5e"/>
+    <text x="903" y="310" text-anchor="middle" class="chip">导出</text>
+    <text x="874" y="348" class="card-title">结果导出下载</text>
+    <text x="874" y="372" class="card-text">CSV / JSON 导出</text>
+    <text x="874" y="394" class="card-text">原始抓包文件下载</text>
+  </g>
+</svg>
