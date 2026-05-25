@@ -1,0 +1,44 @@
+<script setup>
+defineProps({
+  size: { type: Number, default: 32 },
+})
+</script>
+
+<template>
+  <svg
+    class="pcap-logo"
+    :width="size"
+    :height="size"
+    viewBox="0 0 48 48"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      fill-rule="evenodd"
+      clip-rule="evenodd"
+      d="M13.6 40V8h16.2C37.2 8 42 12.7 42 20s-4.8 12-12.2 12h-8.7v8h-7.5Zm7.5-14.6h8c3.6 0 5.7-2 5.7-5.4s-2.1-5.4-5.7-5.4h-8v10.8Z"
+      fill="url(#pcapLogoFill)"
+    />
+    <path
+      d="M21.1 14.6h8c3.6 0 5.7 2 5.7 5.4s-2.1 5.4-5.7 5.4h-8V14.6Z"
+      fill="#f8fafc"
+      opacity=".92"
+    />
+    <path
+      d="M13.6 40V8h7.5v32h-7.5Z"
+      fill="url(#pcapLogoStem)"
+      opacity=".72"
+    />
+    <defs>
+      <linearGradient id="pcapLogoFill" x1="13.6" y1="8" x2="42.6" y2="37.8" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#2563eb" />
+        <stop offset=".48" stop-color="#0ea5e9" />
+        <stop offset="1" stop-color="#0369a1" />
+      </linearGradient>
+      <linearGradient id="pcapLogoStem" x1="13.6" y1="8" x2="21.1" y2="40" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#1d4ed8" />
+        <stop offset="1" stop-color="#2563eb" />
+      </linearGradient>
+    </defs>
+  </svg>
+</template>

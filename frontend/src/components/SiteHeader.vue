@@ -1,5 +1,6 @@
 <script setup>
-import { Menu, Moon, Network, Sun, X } from '@lucide/vue'
+import { Menu, Moon, Sun, X } from '@lucide/vue'
+import PcapLogo from './PcapLogo.vue'
 
 defineProps({
   dark: { type: Boolean, required: true },
@@ -14,7 +15,7 @@ defineEmits(['toggle-dark', 'toggle-menu'])
   <header class="site-header" :class="{ 'is-scrolled': scrolled }">
     <div class="header-inner">
       <a class="brand" href="#top" aria-label="PCAP Analyzer home">
-        <Network :size="24" aria-hidden="true" />
+        <PcapLogo :size="32" aria-hidden="true" />
         <span>PCAP Analyzer</span>
       </a>
 

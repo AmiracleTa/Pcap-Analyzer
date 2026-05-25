@@ -1,5 +1,5 @@
 <script setup>
-import { BarChart3, Cloud, Cpu, Download, Filter, Monitor, Server, Terminal } from '@lucide/vue'
+import { BarChart3, BrainCircuit, Cloud, Cpu, Download, Filter, Monitor, Server, Terminal } from '@lucide/vue'
 
 const features = [
   {
@@ -26,6 +26,11 @@ const features = [
     title: 'CSV JSON 导出',
     text: '解析结果支持 CSV 和 JSON 格式导出，便于归档和复用。',
     icon: Download,
+  },
+  {
+    title: 'AI 安全报告',
+    text: 'AI 作为安全助手，基于部分数据包、整体流量趋势和协议占比生成风险报告。',
+    icon: BrainCircuit,
   },
 ]
 
