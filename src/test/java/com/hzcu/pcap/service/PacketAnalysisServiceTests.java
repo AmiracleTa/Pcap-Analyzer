@@ -38,11 +38,11 @@ class PacketAnalysisServiceTests {
         CaptureFileRepository captureFileRepository = mock(CaptureFileRepository.class);
         PacketRecordRepository packetRecordRepository = mock(PacketRecordRepository.class);
         AnalysisSummaryRepository analysisSummaryRepository = mock(AnalysisSummaryRepository.class);
+        PacketRecordBatchWriter packetRecordBatchWriter = mock(PacketRecordBatchWriter.class);
         ObjectMapper objectMapper = new ObjectMapper();
 
         when(fileStorageService.getFile(9L)).thenReturn(captureFile);
         when(fileStorageService.getDownloadPath(9L)).thenReturn(Path.of("sample.pcapng"));
-        when(packetRecordRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(captureFileRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(analysisSummaryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -52,7 +52,8 @@ class PacketAnalysisServiceTests {
                 packetRecordRepository,
                 analysisSummaryRepository,
                 new FakeTsharkCommandRunner(),
-                objectMapper
+                objectMapper,
+                packetRecordBatchWriter
         );
 
         Map<String, Object> result = service.analyze(9L);
@@ -63,9 +64,9 @@ class PacketAnalysisServiceTests {
         verify(packetRecordRepository).deleteByFileId(9L);
         verify(analysisSummaryRepository).deleteByFileId(9L);
 
-        ArgumentCaptor<Iterable<PacketRecord>> recordsCaptor = ArgumentCaptor.forClass(Iterable.class);
-        verify(packetRecordRepository).saveAll(recordsCaptor.capture());
-        List<PacketRecord> records = stream(recordsCaptor.getValue());
+        ArgumentCaptor<List<PacketRecord>> recordsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(packetRecordBatchWriter).saveAll(recordsCaptor.capture());
+        List<PacketRecord> records = recordsCaptor.getValue();
         assertThat(records).hasSize(3);
         assertThat(records.get(0).getPacketNo()).isEqualTo(1L);
         assertThat(records.get(0).getSourceIp()).isEqualTo("192.168.1.2");
@@ -116,12 +117,12 @@ class PacketAnalysisServiceTests {
         CaptureFileRepository captureFileRepository = mock(CaptureFileRepository.class);
         PacketRecordRepository packetRecordRepository = mock(PacketRecordRepository.class);
         AnalysisSummaryRepository analysisSummaryRepository = mock(AnalysisSummaryRepository.class);
+        PacketRecordBatchWriter packetRecordBatchWriter = mock(PacketRecordBatchWriter.class);
         ObjectMapper objectMapper = new ObjectMapper();
         LimitAwareTsharkCommandRunner tsharkCommandRunner = new LimitAwareTsharkCommandRunner();
 
         when(fileStorageService.getFile(9L)).thenReturn(captureFile);
         when(fileStorageService.getDownloadPath(9L)).thenReturn(Path.of("sample.pcapng"));
-        when(packetRecordRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(captureFileRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(analysisSummaryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -131,7 +132,8 @@ class PacketAnalysisServiceTests {
                 packetRecordRepository,
                 analysisSummaryRepository,
                 tsharkCommandRunner,
-                objectMapper
+                objectMapper,
+                packetRecordBatchWriter
         );
 
         service.analyze(9L);

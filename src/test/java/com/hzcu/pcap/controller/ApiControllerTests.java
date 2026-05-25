@@ -4,6 +4,7 @@ import com.hzcu.pcap.entity.PacketRecord;
 import com.hzcu.pcap.repository.PacketRecordRepository;
 import com.hzcu.pcap.service.FileStorageService;
 import com.hzcu.pcap.service.PacketAnalysisService;
+import com.hzcu.pcap.service.SecurityReportService;
 import com.hzcu.pcap.service.SummaryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
@@ -68,6 +69,7 @@ class ApiControllerTests {
         PacketAnalysisService packetAnalysisService = mock(PacketAnalysisService.class);
         SummaryService summaryService = mock(SummaryService.class);
         PacketRecordRepository packetRecordRepository = mock(PacketRecordRepository.class);
+        SecurityReportService securityReportService = mock(SecurityReportService.class);
         when(packetAnalysisService.analyze(3L)).thenReturn(Map.of(
                 "status", "ok",
                 "packetCount", 0
@@ -89,7 +91,7 @@ class ApiControllerTests {
         ));
         when(packetRecordRepository.findByFileId(3L)).thenReturn(java.util.List.of());
         MockMvc mockMvc = standaloneSetup(
-                new AnalysisController(packetAnalysisService, summaryService, packetRecordRepository)
+                new AnalysisController(packetAnalysisService, summaryService, packetRecordRepository, securityReportService)
         ).build();
 
         mockMvc.perform(post("/api/files/3/analyze"))
@@ -124,6 +126,7 @@ class ApiControllerTests {
         PacketAnalysisService packetAnalysisService = mock(PacketAnalysisService.class);
         SummaryService summaryService = mock(SummaryService.class);
         PacketRecordRepository packetRecordRepository = mock(PacketRecordRepository.class);
+        SecurityReportService securityReportService = mock(SecurityReportService.class);
         PacketRecord packet = new PacketRecord();
         packet.setPacketNo(1L);
         packet.setTimestampText("1779350202.670520900");
@@ -136,7 +139,7 @@ class ApiControllerTests {
         packet.setInfo("43489 → 443 [ACK]\nSeq=1");
         when(packetRecordRepository.findByFileId(3L)).thenReturn(List.of(packet));
         MockMvc mockMvc = standaloneSetup(
-                new AnalysisController(packetAnalysisService, summaryService, packetRecordRepository)
+                new AnalysisController(packetAnalysisService, summaryService, packetRecordRepository, securityReportService)
         ).build();
 
         String csv = mockMvc.perform(get("/api/files/3/export/csv"))

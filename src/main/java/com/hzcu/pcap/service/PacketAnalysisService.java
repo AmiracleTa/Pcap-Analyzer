@@ -31,19 +31,22 @@ public class PacketAnalysisService {
     private final AnalysisSummaryRepository analysisSummaryRepository;
     private final TsharkCommandRunner tsharkCommandRunner;
     private final ObjectMapper objectMapper;
+    private final PacketRecordBatchWriter packetRecordBatchWriter;
 
     public PacketAnalysisService(FileStorageService fileStorageService,
                                  CaptureFileRepository captureFileRepository,
                                  PacketRecordRepository packetRecordRepository,
                                  AnalysisSummaryRepository analysisSummaryRepository,
                                  TsharkCommandRunner tsharkCommandRunner,
-                                 ObjectMapper objectMapper) {
+                                 ObjectMapper objectMapper,
+                                 PacketRecordBatchWriter packetRecordBatchWriter) {
         this.fileStorageService = fileStorageService;
         this.captureFileRepository = captureFileRepository;
         this.packetRecordRepository = packetRecordRepository;
         this.analysisSummaryRepository = analysisSummaryRepository;
         this.tsharkCommandRunner = tsharkCommandRunner;
         this.objectMapper = objectMapper;
+        this.packetRecordBatchWriter = packetRecordBatchWriter;
     }
 
     @Transactional
@@ -66,7 +69,7 @@ public class PacketAnalysisService {
 
             reporter.report(AnalysisProgressEvent.of("counting", "capinfos-count", "正在读取数据包总数", 0, 0, 0));
             long totalPackets = tsharkCommandRunner.countPackets(capturePath);
-            reporter.report(AnalysisProgressEvent.of("parsing", "tshark-fields", "正在读取数据包字段", totalPackets, 0, 0));
+            reporter.report(AnalysisProgressEvent.of("parsing", "tshark-fields", "正在读取数据包字段", totalPackets, 0, 8));
 
             packetRecordRepository.deleteByFileId(fileId);
             analysisSummaryRepository.deleteByFileId(fileId);
@@ -80,7 +83,7 @@ public class PacketAnalysisService {
                         "正在读取数据包字段",
                         totalPackets,
                         processed,
-                        percent(processed, totalPackets)
+                        fieldPercent(processed, totalPackets)
                 ));
             });
 
@@ -93,8 +96,8 @@ public class PacketAnalysisService {
                 records.add(toPacketRecord(fileId, lines.get(i), detailItems.size() > i ? detailItems.get(i) : "{}"));
             }
 
-            reporter.report(AnalysisProgressEvent.of("saving", "database-save", "正在保存解析结果", totalPackets, records.size(), 95));
-            packetRecordRepository.saveAll(records);
+            reporter.report(AnalysisProgressEvent.of("saving", "database-save", "正在批量保存解析结果", totalPackets, records.size(), 95));
+            packetRecordBatchWriter.saveAll(records);
 
             reporter.report(AnalysisProgressEvent.of("summary", "summary-build", "正在生成统计结果", totalPackets, records.size(), 98));
             analysisSummaryRepository.save(buildSummary(fileId, records, featureLines));
@@ -117,6 +120,14 @@ public class PacketAnalysisService {
         }
         long value = Math.round((processedPackets * 100.0) / totalPackets);
         return (int) Math.max(0, Math.min(100, value));
+    }
+
+    private int fieldPercent(long processedPackets, long totalPackets) {
+        if (totalPackets <= 0) {
+            return 8;
+        }
+        long value = 8 + Math.round((processedPackets * 80.0) / totalPackets);
+        return (int) Math.max(8, Math.min(88, value));
     }
 
     private String rootMessage(Throwable throwable) {

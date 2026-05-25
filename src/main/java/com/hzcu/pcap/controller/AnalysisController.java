@@ -1,9 +1,11 @@
 package com.hzcu.pcap.controller;
 
 import com.hzcu.pcap.dto.AnalysisProgressEvent;
+import com.hzcu.pcap.dto.SecurityReportResult;
 import com.hzcu.pcap.entity.PacketRecord;
 import com.hzcu.pcap.repository.PacketRecordRepository;
 import com.hzcu.pcap.service.PacketAnalysisService;
+import com.hzcu.pcap.service.SecurityReportService;
 import com.hzcu.pcap.service.SummaryService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -27,18 +29,23 @@ public class AnalysisController {
     private final PacketAnalysisService packetAnalysisService;
     private final SummaryService summaryService;
     private final PacketRecordRepository packetRecordRepository;
+    private final SecurityReportService securityReportService;
 
     public AnalysisController(PacketAnalysisService packetAnalysisService,
                               SummaryService summaryService,
-                              PacketRecordRepository packetRecordRepository) {
+                              PacketRecordRepository packetRecordRepository,
+                              SecurityReportService securityReportService) {
         this.packetAnalysisService = packetAnalysisService;
         this.summaryService = summaryService;
         this.packetRecordRepository = packetRecordRepository;
+        this.securityReportService = securityReportService;
     }
 
     @PostMapping("/analyze")
     public Map<String, Object> analyze(@PathVariable Long id) {
-        return packetAnalysisService.analyze(id);
+        Map<String, Object> result = packetAnalysisService.analyze(id);
+        securityReportService.generateAndStore(id);
+        return result;
     }
 
     @GetMapping(value = "/analyze/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -47,7 +54,15 @@ public class AnalysisController {
         CompletableFuture.runAsync(() -> {
             try {
                 Map<String, Object> result = packetAnalysisService.analyzeWithProgress(id, event -> sendProgress(emitter, event));
-                sendProgress(emitter, AnalysisProgressEvent.done(packetCount(result)));
+                long packetCount = packetCount(result);
+                sendProgress(emitter, AnalysisProgressEvent.aiReport(packetCount));
+                SecurityReportResult report;
+                try {
+                    report = securityReportService.generateAndStore(id);
+                } catch (RuntimeException ignored) {
+                    report = SecurityReportResult.unavailable("", "", "AI 安全报告保存失败。");
+                }
+                sendProgress(emitter, doneProgress(packetCount, report));
                 emitter.complete();
             } catch (RuntimeException e) {
                 sendProgress(emitter, AnalysisProgressEvent.error("解析失败：" + rootMessage(e)));
@@ -65,6 +80,11 @@ public class AnalysisController {
     @GetMapping("/summary")
     public Map<String, Object> summary(@PathVariable Long id) {
         return summaryService.getSummary(id);
+    }
+
+    @GetMapping("/security-report")
+    public SecurityReportResult latestSecurityReport(@PathVariable Long id) {
+        return securityReportService.latest(id);
     }
 
     @GetMapping(value = "/export/csv", produces = "text/csv;charset=UTF-8")
@@ -140,6 +160,24 @@ public class AnalysisController {
     private long packetCount(Map<String, Object> result) {
         Object value = result.get("packetCount");
         return value instanceof Number ? ((Number) value).longValue() : 0L;
+    }
+
+    private AnalysisProgressEvent doneProgress(long packetCount, SecurityReportResult report) {
+        if (report.available()) {
+            return AnalysisProgressEvent.done(packetCount);
+        }
+        String message = report.message();
+        if (message == null || message.isBlank()) {
+            message = "解析完成，但 AI 安全报告未生成。";
+        } else if (message.startsWith("未配置")) {
+            message = "解析完成，但 AI 安全报告未生成：" + message;
+        } else if (message.length() > 80) {
+            message = message.substring(0, 80) + "...";
+        }
+        if (!message.startsWith("解析完成")) {
+            message = "解析完成，但 " + message;
+        }
+        return AnalysisProgressEvent.done(packetCount, false, message);
     }
 
     private String rootMessage(Throwable throwable) {

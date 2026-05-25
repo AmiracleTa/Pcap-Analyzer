@@ -4,6 +4,7 @@ import com.hzcu.pcap.entity.CaptureFile;
 import com.hzcu.pcap.repository.AnalysisSummaryRepository;
 import com.hzcu.pcap.repository.CaptureFileRepository;
 import com.hzcu.pcap.repository.PacketRecordRepository;
+import com.hzcu.pcap.repository.SecurityReportRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,15 +29,18 @@ public class FileStorageService {
     private final CaptureFileRepository captureFileRepository;
     private final PacketRecordRepository packetRecordRepository;
     private final AnalysisSummaryRepository analysisSummaryRepository;
+    private final SecurityReportRepository securityReportRepository;
     private final Path uploadPath;
 
     public FileStorageService(CaptureFileRepository captureFileRepository,
                               PacketRecordRepository packetRecordRepository,
                               AnalysisSummaryRepository analysisSummaryRepository,
+                              SecurityReportRepository securityReportRepository,
                               @Value("${app.upload-dir:uploads}") String uploadDir) {
         this.captureFileRepository = captureFileRepository;
         this.packetRecordRepository = packetRecordRepository;
         this.analysisSummaryRepository = analysisSummaryRepository;
+        this.securityReportRepository = securityReportRepository;
         this.uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
     }
 
@@ -82,6 +86,7 @@ public class FileStorageService {
         }
         packetRecordRepository.deleteByFileId(id);
         analysisSummaryRepository.deleteByFileId(id);
+        securityReportRepository.deleteByFileId(id);
         captureFileRepository.delete(captureFile);
     }
 

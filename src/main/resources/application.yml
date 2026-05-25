@@ -3,7 +3,7 @@ server:
 
 spring:
   datasource:
-    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/pcap_analyzer?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/pcap_analyzer?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&rewriteBatchedStatements=true}
     username: ${MYSQL_USERNAME:root}
     password: ${MYSQL_PASSWORD:mysql123123}
   jpa:
@@ -17,3 +17,13 @@ spring:
 
 app:
   upload-dir: uploads
+
+ai:
+  provider:
+    enabled: ${AI_ENABLED:true}
+    provider: ${AI_PROVIDER:deepseek}
+    api-key: ${AI_API_KEY:}
+    model: ${AI_MODEL:deepseek-v4-flash}
+    base-url: ${AI_BASE_URL:https://api.deepseek.com}
+    chat-completions-path: ${AI_CHAT_COMPLETIONS_PATH:/chat/completions}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:60}
