@@ -36,14 +36,47 @@
 
 ## 快速开始
 
-### 环境要求
+### 使用 Docker
+
+#### Building and running the application
+
+一行命令即可快速开始：
+
+```bash
+docker compose up --build
+```
+
+这会启动：
+
+- `server`: Spring Boot 镜像, vue 前端和 `tshark`/`capinfos`
+- `db`: MySQL 8.0 服务, 数据持久化在 `mysql-data` 卷
+
+应用访问地址：
+
+```text
+http://localhost:8080
+```
+
+#### AI configuration
+
+AI 默认不启用，没有 api key 也可以正常运行
+
+启用 ai 报告：
+
+```bash
+AI_ENABLED=true AI_API_KEY=<your-key> docker compose up --build
+```
+
+### 手动运行
+
+#### 环境要求
 
 - JDK 25
 - Node.js 与 npm
 - MySQL
 - `tshark`、`capinfos`
 
-### MySQL 初始化
+#### MySQL 初始化
 
 ```bash
 mysql --protocol=tcp --host=127.0.0.1 --user=root --password=mysql123123 < sql/init.sql
@@ -67,7 +100,7 @@ MYSQL_USERNAME=root
 MYSQL_PASSWORD=mysql123123
 ```
 
-### AI 配置
+#### AI 配置
 
 默认配置
 
@@ -89,7 +122,7 @@ ai:
 AI_API_KEY=你的 API Key
 ```
 
-### 启动后端
+#### 启动后端
 
 ```bash
 ./mvnw test
@@ -106,7 +139,7 @@ curl http://localhost:8080/api/health
 {"status":"ok"}
 ```
 
-### 启动前端
+#### 启动前端
 
 ```bash
 cd frontend

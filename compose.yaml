@@ -1,0 +1,45 @@
+# Comments are provided throughout this file to help you get started.
+# If you need more help, visit the Docker Compose reference guide at
+# https://docs.docker.com/go/compose-spec-reference/
+
+# Here the instructions define your application as a service called "server".
+# This service is built from the Dockerfile in the current directory.
+# You can add other services your application may depend on here, such as a
+# database or a cache. For examples, see the Awesome Compose repository:
+# https://github.com/docker/awesome-compose
+services:
+  server:
+    build:
+      context: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MYSQL_URL: "jdbc:mysql://db:3306/pcap_analyzer?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true"
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: mysql123123
+      AI_ENABLED: "${AI_ENABLED:-false}"
+      AI_API_KEY: "${AI_API_KEY:-}"
+      APP_UPLOAD_DIR: /app/uploads
+    ports:
+      - 8080:8080
+    volumes:
+      - uploads:/app/uploads
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql123123
+      MYSQL_DATABASE: pcap_analyzer
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pmysql123123"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+volumes:
+  mysql-data:
+  uploads:
