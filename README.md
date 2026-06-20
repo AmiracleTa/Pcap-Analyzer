@@ -34,6 +34,39 @@
 - 基础设施：`capinfos` / `tshark` 命令执行、AI HTTP 调用
 - 数据层：MySQL 保存文件、数据包、统计、AI 报告，`uploads/` 保存原始文件
 
+## 项目结构
+
+```text
+pcap-analyzer/
+├── assets/                         # README 展示用架构图和页面截图
+├── frontend/                       # Vue 3 + Vite 前端项目
+│   ├── public/                     # favicon、图标等静态资源
+│   ├── scripts/                    # 前端交互检查脚本
+│   └── src/
+│       ├── api/                    # REST 与 SSE 请求封装
+│       ├── components/             # 上传、表格、图表、安全报告等组件
+│       ├── views/                  # 文件管理页和分析结果页
+│       ├── App.vue                 # 单页工作台入口
+│       └── main.js                 # 前端启动入口
+├── samples/                        # 示例抓包文件
+├── sql/                            # 数据库初始化脚本
+├── src/
+│   ├── main/
+│   │   ├── java/com/hzcu/pcap/
+│   │   │   ├── config/             # AI 提供商配置
+│   │   │   ├── controller/         # 文件、分析、健康检查接口
+│   │   │   ├── dto/                # 进度事件和 AI 报告响应结构
+│   │   │   ├── entity/             # JPA 实体
+│   │   │   ├── repository/         # Spring Data JPA 仓储
+│   │   │   └── service/            # 存储、解析、统计、AI 报告服务
+│   │   └── resources/              # Spring Boot 配置
+│   └── test/                       # 后端单元测试和控制器测试
+├── Dockerfile                      # 前后端打包与运行镜像
+├── compose.yaml                    # Spring Boot + MySQL 一键启动配置
+├── pom.xml                         # Maven 后端依赖与构建配置
+└── README.md                       # 项目说明文档
+```
+
 ## 快速开始
 
 ### 使用 Docker
@@ -114,6 +147,7 @@ ai:
     base-url: ${AI_BASE_URL:https://api.deepseek.com}
     chat-completions-path: ${AI_CHAT_COMPLETIONS_PATH:/chat/completions}
     timeout-seconds: ${AI_TIMEOUT_SECONDS:60}
+    max-output-tokens: ${AI_MAX_OUTPUT_TOKENS:8192}
 ```
 
 设置 `api key`
@@ -144,7 +178,7 @@ curl http://localhost:8080/api/health
 ```bash
 cd frontend
 npm install
-npm run dev -- --host 127.0.0.1
+npm run dev
 ```
 
 访问地址
