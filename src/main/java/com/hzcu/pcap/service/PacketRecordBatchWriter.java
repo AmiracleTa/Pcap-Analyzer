@@ -8,6 +8,9 @@ import java.sql.PreparedStatement;
 import java.sql.Types;
 import java.util.List;
 
+/**
+ * 使用 JDBC 批量写入数据包记录。
+ */
 @Service
 public class PacketRecordBatchWriter {
 
@@ -20,10 +23,20 @@ public class PacketRecordBatchWriter {
 
     private final JdbcTemplate jdbcTemplate;
 
+    /**
+     * 创建数据包批量写入器。
+     *
+     * @param jdbcTemplate Spring JDBC 模板
+     */
     public PacketRecordBatchWriter(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /**
+     * 批量保存数据包记录。
+     *
+     * @param records 待保存的数据包记录
+     */
     public void saveAll(List<PacketRecord> records) {
         if (records.isEmpty()) {
             return;

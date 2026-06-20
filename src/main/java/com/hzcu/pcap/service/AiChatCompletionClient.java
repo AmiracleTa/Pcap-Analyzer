@@ -19,6 +19,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 调用兼容 Chat Completions 的 AI 服务生成安全报告。
+ */
 @Service
 public class AiChatCompletionClient {
 
@@ -26,12 +29,24 @@ public class AiChatCompletionClient {
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
 
+    /**
+     * 创建 AI 聊天补全客户端。
+     *
+     * @param properties AI 提供商配置
+     * @param objectMapper JSON 解析组件
+     */
     public AiChatCompletionClient(AiProviderProperties properties, ObjectMapper objectMapper) {
         this.properties = properties;
         this.objectMapper = objectMapper;
         this.httpClient = HttpClient.newHttpClient();
     }
 
+    /**
+     * 调用 AI 服务并规范化模型返回的安全报告。
+     *
+     * @param contextJson AI 安全分析上下文
+     * @return 规范化后的安全报告模型输出
+     */
     public AiSecurityModelOutput createReport(String contextJson) {
         try {
             String requestBody = objectMapper.writeValueAsString(requestBody(contextJson));
@@ -58,6 +73,7 @@ public class AiChatCompletionClient {
     }
 
     private Map<String, Object> requestBody(String contextJson) {
+        // 提示词要求模型只基于输入证据输出 JSON，避免前端再处理 Markdown 或自由文本。
         return Map.of(
                 "model", properties.model(),
                 "messages", List.of(

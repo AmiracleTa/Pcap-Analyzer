@@ -22,6 +22,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * 提供抓包解析、统计查询、安全报告和结果导出接口。
+ */
 @RestController
 @RequestMapping("/api/files/{id}")
 public class AnalysisController {
@@ -31,6 +34,14 @@ public class AnalysisController {
     private final PacketRecordRepository packetRecordRepository;
     private final SecurityReportService securityReportService;
 
+    /**
+     * 创建分析控制器。
+     *
+     * @param packetAnalysisService 抓包解析服务
+     * @param summaryService 统计结果服务
+     * @param packetRecordRepository 数据包记录仓储
+     * @param securityReportService AI 安全报告服务
+     */
     public AnalysisController(PacketAnalysisService packetAnalysisService,
                               SummaryService summaryService,
                               PacketRecordRepository packetRecordRepository,
@@ -41,6 +52,12 @@ public class AnalysisController {
         this.securityReportService = securityReportService;
     }
 
+    /**
+     * 同步触发抓包解析，并在解析完成后尝试生成 AI 安全报告。
+     *
+     * @param id 文件 ID
+     * @return 解析状态和数据包数量
+     */
     @PostMapping("/analyze")
     public Map<String, Object> analyze(@PathVariable Long id) {
         Map<String, Object> result = packetAnalysisService.analyze(id);
@@ -48,6 +65,12 @@ public class AnalysisController {
         return result;
     }
 
+    /**
+     * 通过 SSE 推送抓包解析进度，并在完成时推送 AI 报告生成状态。
+     *
+     * @param id 文件 ID
+     * @return SSE 事件发射器
+     */
     @GetMapping(value = "/analyze/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter analyzeEvents(@PathVariable Long id) {
         SseEmitter emitter = new SseEmitter(0L);
@@ -72,21 +95,45 @@ public class AnalysisController {
         return emitter;
     }
 
+    /**
+     * 查询指定文件的全部数据包记录。
+     *
+     * @param id 文件 ID
+     * @return 数据包记录列表
+     */
     @GetMapping("/packets")
     public List<PacketRecord> packets(@PathVariable Long id) {
         return packetRecordRepository.findByFileId(id);
     }
 
+    /**
+     * 查询指定文件的统计结果。
+     *
+     * @param id 文件 ID
+     * @return 面向前端图表的统计数据
+     */
     @GetMapping("/summary")
     public Map<String, Object> summary(@PathVariable Long id) {
         return summaryService.getSummary(id);
     }
 
+    /**
+     * 查询指定文件最近一次保存的 AI 安全报告。
+     *
+     * @param id 文件 ID
+     * @return AI 安全报告结果
+     */
     @GetMapping("/security-report")
     public SecurityReportResult latestSecurityReport(@PathVariable Long id) {
         return securityReportService.latest(id);
     }
 
+    /**
+     * 将指定文件的数据包记录导出为 CSV。
+     *
+     * @param id 文件 ID
+     * @return CSV 下载响应
+     */
     @GetMapping(value = "/export/csv", produces = "text/csv;charset=UTF-8")
     public ResponseEntity<String> exportCsv(@PathVariable Long id) {
         List<PacketRecord> packets = packetRecordRepository.findByFileId(id);
@@ -117,11 +164,18 @@ public class AnalysisController {
                 .body(csv.toString());
     }
 
+    /**
+     * 将指定文件的数据包记录导出为 JSON。
+     *
+     * @param id 文件 ID
+     * @return 包含数据包列表的 JSON 对象
+     */
     @GetMapping(value = "/export/json", produces = MediaType.APPLICATION_JSON_VALUE)
     public Map<String, Object> exportJson(@PathVariable Long id) {
         return Map.of("packets", packetRecordRepository.findByFileId(id));
     }
 
+    // 同时处理换行、引号、长数字误转科学计数法和 Excel 公式注入风险。
     private String csvValue(Object value) {
         if (value == null) {
             return "\"\"";

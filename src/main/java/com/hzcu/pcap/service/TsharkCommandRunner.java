@@ -21,6 +21,9 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * 封装 {@code capinfos} 和 {@code tshark} 外部命令调用。
+ */
 @Component
 public class TsharkCommandRunner {
 
@@ -28,6 +31,12 @@ public class TsharkCommandRunner {
     private static final Pattern PACKET_COUNT_PATTERN = Pattern.compile("(?m)^\\s*Number of packets:\\s*(\\d+)\\s*$");
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     * 使用 {@code capinfos} 读取抓包文件中的数据包总数。
+     *
+     * @param capturePath 抓包文件路径
+     * @return 数据包数量
+     */
     public long countPackets(Path capturePath) {
         String output = runCommand(packetCountCommand(capturePath));
         return parsePacketCount(output);
@@ -37,11 +46,24 @@ public class TsharkCommandRunner {
         return List.of("capinfos", "-M", "-c", capturePath.toString());
     }
 
+    /**
+     * 读取抓包文件的核心字段行。
+     *
+     * @param capturePath 抓包文件路径
+     * @return tshark 字段输出行
+     */
     public List<String> readPacketFieldLines(Path capturePath) {
         return readPacketFieldLines(capturePath, line -> {
         });
     }
 
+    /**
+     * 读取抓包文件的核心字段行，并在每行读取时调用回调。
+     *
+     * @param capturePath 抓包文件路径
+     * @param lineConsumer 单行输出回调
+     * @return tshark 字段输出行
+     */
     public List<String> readPacketFieldLines(Path capturePath, Consumer<String> lineConsumer) {
         return runLineCommand(packetFieldCommand(capturePath), lineConsumer);
     }
@@ -89,10 +111,23 @@ public class TsharkCommandRunner {
         );
     }
 
+    /**
+     * 读取所有数据包的 JSON 详情。
+     *
+     * @param capturePath 抓包文件路径
+     * @return 每个数据包对应的 JSON 字符串
+     */
     public List<String> readPacketDetailJsonItems(Path capturePath) {
         return readPacketDetailJsonItems(capturePath, 0);
     }
 
+    /**
+     * 读取数据包 JSON 详情，可限制最大数据包数量。
+     *
+     * @param capturePath 抓包文件路径
+     * @param packetLimit 读取上限，非正数表示不限制
+     * @return 每个数据包对应的 JSON 字符串
+     */
     public List<String> readPacketDetailJsonItems(Path capturePath, int packetLimit) {
         List<String> command = new ArrayList<>(List.of(
                 "tshark",
@@ -121,6 +156,12 @@ public class TsharkCommandRunner {
         }
     }
 
+    /**
+     * 读取 DNS 和 HTTP 相关的协议特征字段。
+     *
+     * @param capturePath 抓包文件路径
+     * @return 协议特征字段输出行
+     */
     public List<String> readProtocolFeatureLines(Path capturePath) {
         String output = runCommand(List.of(
                 "tshark",
@@ -153,6 +194,11 @@ public class TsharkCommandRunner {
         return output.lines().filter(line -> !line.isBlank()).toList();
     }
 
+    /**
+     * 查询当前环境中的 tshark 版本信息。
+     *
+     * @return tshark 版本文本
+     */
     public String versionText() {
         return runCommand(List.of("tshark", "-v"));
     }
@@ -169,6 +215,7 @@ public class TsharkCommandRunner {
         ProcessBuilder processBuilder = new ProcessBuilder(command);
         try {
             Process process = processBuilder.start();
+            // 字段解析需要边读边上报进度，stderr 仍异步读取以避免进程阻塞。
             CompletableFuture<String> stderrFuture = readStreamAsync(process.getErrorStream());
             List<String> lines = new ArrayList<>();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
@@ -205,6 +252,7 @@ public class TsharkCommandRunner {
         ProcessBuilder processBuilder = new ProcessBuilder(command);
         try {
             Process process = processBuilder.start();
+            // stdout/stderr 同时读取，避免任一管道填满导致外部命令卡住。
             CompletableFuture<String> stdoutFuture = readStreamAsync(process.getInputStream());
             CompletableFuture<String> stderrFuture = readStreamAsync(process.getErrorStream());
             boolean completed = process.waitFor(TIMEOUT.toSeconds(), TimeUnit.SECONDS);

@@ -13,6 +13,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 构造发送给 AI 模型的安全分析上下文。
+ */
 @Service
 public class AiSecurityContextService {
 
@@ -24,6 +27,14 @@ public class AiSecurityContextService {
     private final SummaryService summaryService;
     private final ObjectMapper objectMapper;
 
+    /**
+     * 创建 AI 安全上下文服务。
+     *
+     * @param captureFileRepository 抓包文件仓储
+     * @param packetRecordRepository 数据包记录仓储
+     * @param summaryService 统计结果服务
+     * @param objectMapper JSON 序列化组件
+     */
     public AiSecurityContextService(CaptureFileRepository captureFileRepository,
                                     PacketRecordRepository packetRecordRepository,
                                     SummaryService summaryService,
@@ -34,6 +45,12 @@ public class AiSecurityContextService {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 构造指定文件的 AI 安全报告输入上下文。
+     *
+     * @param fileId 文件 ID
+     * @return JSON 格式的模型上下文
+     */
     public String buildContext(Long fileId) {
         CaptureFile captureFile = captureFileRepository.findById(fileId)
                 .orElseThrow(() -> new IllegalArgumentException("文件不存在：" + fileId));
@@ -55,6 +72,7 @@ public class AiSecurityContextService {
     }
 
     private Map<String, Object> trimmedSummary(Map<String, Object> source) {
+        // 只发送协议分布和流量趋势，减少敏感明细外传并控制 token 成本。
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("protocols", source.getOrDefault("protocols", Map.of()));
         summary.put("trafficTrend", compactValue(source.getOrDefault("trafficTrend", List.of())));

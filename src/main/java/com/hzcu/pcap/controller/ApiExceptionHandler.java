@@ -12,9 +12,19 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * 将控制器抛出的异常统一转换为 JSON 错误响应。
+ */
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+    /**
+     * 处理带有明确 HTTP 状态码的业务异常。
+     *
+     * @param exception Spring Web 抛出的状态异常
+     * @param request 当前 HTTP 请求
+     * @return 标准错误响应
+     */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException exception,
                                                                             HttpServletRequest request) {
@@ -23,12 +33,26 @@ public class ApiExceptionHandler {
         return buildResponse(statusCode, message, request);
     }
 
+    /**
+     * 处理服务层抛出的非法状态异常。
+     *
+     * @param exception 非法状态异常
+     * @param request 当前 HTTP 请求
+     * @return 标准错误响应
+     */
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalStateException(IllegalStateException exception,
                                                                           HttpServletRequest request) {
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, exception.getMessage(), request);
     }
 
+    /**
+     * 处理未被更具体处理器捕获的异常。
+     *
+     * @param exception 原始异常
+     * @param request 当前 HTTP 请求
+     * @return 标准错误响应
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleException(Exception exception, HttpServletRequest request) {
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, exception.getMessage(), request);

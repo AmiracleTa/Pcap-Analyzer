@@ -20,6 +20,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * 执行抓包解析、数据包入库和统计结果生成。
+ */
 @Service
 public class PacketAnalysisService {
 
@@ -33,6 +36,17 @@ public class PacketAnalysisService {
     private final ObjectMapper objectMapper;
     private final PacketRecordBatchWriter packetRecordBatchWriter;
 
+    /**
+     * 创建抓包解析服务。
+     *
+     * @param fileStorageService 文件存储服务
+     * @param captureFileRepository 抓包文件仓储
+     * @param packetRecordRepository 数据包记录仓储
+     * @param analysisSummaryRepository 分析统计仓储
+     * @param tsharkCommandRunner tshark 命令执行器
+     * @param objectMapper JSON 序列化组件
+     * @param packetRecordBatchWriter 数据包批量写入器
+     */
     public PacketAnalysisService(FileStorageService fileStorageService,
                                  CaptureFileRepository captureFileRepository,
                                  PacketRecordRepository packetRecordRepository,
@@ -49,11 +63,24 @@ public class PacketAnalysisService {
         this.packetRecordBatchWriter = packetRecordBatchWriter;
     }
 
+    /**
+     * 同步解析指定抓包文件，不推送进度事件。
+     *
+     * @param fileId 文件 ID
+     * @return 解析状态和数据包数量
+     */
     @Transactional
     public Map<String, Object> analyze(Long fileId) {
         return analyzeInternal(fileId, AnalysisProgressReporter.noop());
     }
 
+    /**
+     * 解析指定抓包文件，并通过回调持续报告解析进度。
+     *
+     * @param fileId 文件 ID
+     * @param reporter 进度上报器
+     * @return 解析状态和数据包数量
+     */
     @Transactional
     public Map<String, Object> analyzeWithProgress(Long fileId, AnalysisProgressReporter reporter) {
         return analyzeInternal(fileId, reporter);
@@ -91,6 +118,7 @@ public class PacketAnalysisService {
             List<String> detailItems = tsharkCommandRunner.readPacketDetailJsonItems(capturePath, DETAIL_PACKET_LIMIT);
             List<String> featureLines = tsharkCommandRunner.readProtocolFeatureLines(capturePath);
 
+            // 字段行覆盖全部数据包，详情 JSON 只保存前若干条，避免大文件把数据库撑得过重。
             List<PacketRecord> records = new ArrayList<>();
             for (int i = 0; i < lines.size(); i++) {
                 records.add(toPacketRecord(fileId, lines.get(i), detailItems.size() > i ? detailItems.get(i) : "{}"));
@@ -157,6 +185,7 @@ public class PacketAnalysisService {
     }
 
     private String[] splitColumns(String line) {
+        // _ws.col.Info 可能包含制表符，只把前 12 列按字段拆分，剩余内容合并为摘要。
         String[] raw = line.split("\t", -1);
         if (raw.length <= 13) {
             return raw;
@@ -309,6 +338,7 @@ public class PacketAnalysisService {
     }
 
     private String[] splitFeatureColumns(String line) {
+        // HTTP URI 等字段可能包含制表符，最后一列统一吸收剩余文本。
         String[] raw = line.split("\t", -1);
         if (raw.length <= 7) {
             return raw;

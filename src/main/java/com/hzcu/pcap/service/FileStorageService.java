@@ -23,6 +23,9 @@ import java.util.UUID;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
+/**
+ * 管理抓包文件在本地磁盘和数据库中的元数据。
+ */
 @Service
 public class FileStorageService {
 
@@ -32,6 +35,15 @@ public class FileStorageService {
     private final SecurityReportRepository securityReportRepository;
     private final Path uploadPath;
 
+    /**
+     * 创建文件存储服务。
+     *
+     * @param captureFileRepository 抓包文件仓储
+     * @param packetRecordRepository 数据包记录仓储
+     * @param analysisSummaryRepository 分析统计仓储
+     * @param securityReportRepository 安全报告仓储
+     * @param uploadDir 文件上传目录
+     */
     public FileStorageService(CaptureFileRepository captureFileRepository,
                               PacketRecordRepository packetRecordRepository,
                               AnalysisSummaryRepository analysisSummaryRepository,
@@ -44,6 +56,12 @@ public class FileStorageService {
         this.uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
     }
 
+    /**
+     * 保存上传文件，并创建初始状态为 {@code uploaded} 的文件记录。
+     *
+     * @param file 用户上传的抓包文件
+     * @return 保存后的文件元数据
+     */
     public CaptureFile store(MultipartFile file) {
         try {
             Files.createDirectories(uploadPath);
@@ -67,15 +85,31 @@ public class FileStorageService {
         }
     }
 
+    /**
+     * 查询所有抓包文件记录。
+     *
+     * @return 文件元数据列表
+     */
     public List<CaptureFile> listFiles() {
         return captureFileRepository.findAll();
     }
 
+    /**
+     * 根据 ID 查询抓包文件记录。
+     *
+     * @param id 文件 ID
+     * @return 文件元数据
+     */
     public CaptureFile getFile(Long id) {
         return captureFileRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "file not found"));
     }
 
+    /**
+     * 删除抓包文件及其关联的数据包、统计和安全报告。
+     *
+     * @param id 文件 ID
+     */
     @Transactional
     public void delete(Long id) {
         CaptureFile captureFile = getFile(id);
@@ -90,6 +124,12 @@ public class FileStorageService {
         captureFileRepository.delete(captureFile);
     }
 
+    /**
+     * 获取指定抓包文件在本地磁盘上的路径。
+     *
+     * @param id 文件 ID
+     * @return 本地文件路径
+     */
     public Path getDownloadPath(Long id) {
         CaptureFile captureFile = getFile(id);
         return uploadPath.resolve(captureFile.getStoredName()).normalize();

@@ -24,6 +24,9 @@ import java.util.Set;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
+/**
+ * 处理抓包文件的上传、查询、下载和删除请求。
+ */
 @RestController
 @RequestMapping("/api/files")
 public class FileController {
@@ -32,10 +35,21 @@ public class FileController {
 
     private final FileStorageService fileStorageService;
 
+    /**
+     * 创建文件控制器。
+     *
+     * @param fileStorageService 文件存储服务
+     */
     public FileController(FileStorageService fileStorageService) {
         this.fileStorageService = fileStorageService;
     }
 
+    /**
+     * 上传抓包文件，并保存文件元数据。
+     *
+     * @param file 表单字段名为 {@code file} 的上传文件
+     * @return 保存后的文件元数据
+     */
     @PostMapping
     public CaptureFile upload(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty() || !ALLOWED_EXTENSIONS.contains(extensionOf(file.getOriginalFilename()))) {
@@ -44,16 +58,34 @@ public class FileController {
         return fileStorageService.store(file);
     }
 
+    /**
+     * 查询所有已上传的抓包文件。
+     *
+     * @return 文件元数据列表
+     */
     @GetMapping
     public List<CaptureFile> list() {
         return fileStorageService.listFiles();
     }
 
+    /**
+     * 根据文件 ID 查询抓包文件元数据。
+     *
+     * @param id 文件 ID
+     * @return 文件元数据
+     */
     @GetMapping("/{id}")
     public CaptureFile get(@PathVariable Long id) {
         return fileStorageService.getFile(id);
     }
 
+    /**
+     * 下载指定抓包文件的原始内容。
+     *
+     * @param id 文件 ID
+     * @return 文件下载响应
+     * @throws MalformedURLException 当本地文件路径无法转换为 URL 时抛出
+     */
     @GetMapping("/{id}/download")
     public ResponseEntity<UrlResource> download(@PathVariable Long id) throws MalformedURLException {
         CaptureFile captureFile = fileStorageService.getFile(id);
@@ -64,6 +96,12 @@ public class FileController {
                 .body(resource);
     }
 
+    /**
+     * 删除指定抓包文件及其关联分析结果。
+     *
+     * @param id 文件 ID
+     * @return 删除结果标记
+     */
     @DeleteMapping("/{id}")
     public Map<String, Boolean> delete(@PathVariable Long id) {
         fileStorageService.delete(id);

@@ -10,17 +10,32 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 将数据库中的分析统计实体转换为前端可直接消费的响应结构。
+ */
 @Service
 public class SummaryService {
 
     private final AnalysisSummaryRepository analysisSummaryRepository;
     private final ObjectMapper objectMapper;
 
+    /**
+     * 创建统计结果服务。
+     *
+     * @param analysisSummaryRepository 分析统计仓储
+     * @param objectMapper JSON 解析组件
+     */
     public SummaryService(AnalysisSummaryRepository analysisSummaryRepository, ObjectMapper objectMapper) {
         this.analysisSummaryRepository = analysisSummaryRepository;
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 查询指定文件的统计结果，未分析时返回空统计结构。
+     *
+     * @param fileId 文件 ID
+     * @return 前端统计响应
+     */
     public Map<String, Object> getSummary(Long fileId) {
         return analysisSummaryRepository.findByFileId(fileId)
                 .map(this::toResponse)

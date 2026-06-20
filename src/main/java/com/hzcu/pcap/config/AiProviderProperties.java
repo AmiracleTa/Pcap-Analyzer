@@ -7,6 +7,17 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * AI 提供商配置项。
+ *
+ * @param enabled 是否启用 AI 报告
+ * @param provider AI 提供商名称
+ * @param apiKey API Key
+ * @param model 模型名称
+ * @param baseUrl API 基础地址
+ * @param chatCompletionsPath Chat Completions 路径
+ * @param timeoutSeconds 请求超时时间，单位秒
+ */
 @ConfigurationProperties(prefix = "ai.provider")
 public record AiProviderProperties(
         boolean enabled,
@@ -17,10 +28,20 @@ public record AiProviderProperties(
         String chatCompletionsPath,
         int timeoutSeconds
 ) {
+    /**
+     * 判断当前配置是否足以发起 AI 请求。
+     *
+     * @return 启用且存在 API Key 时返回 {@code true}
+     */
     public boolean configured() {
         return enabled && apiKey() != null && !apiKey().isBlank();
     }
 
+    /**
+     * 获取 API Key，Windows 环境下会额外从系统环境注册表读取。
+     *
+     * @return API Key；未配置时返回空字符串
+     */
     public String apiKey() {
         if (apiKey != null && !apiKey.isBlank()) {
             return apiKey;
@@ -28,6 +49,11 @@ public record AiProviderProperties(
         return readWindowsEnvironmentValue("AI_API_KEY");
     }
 
+    /**
+     * 拼接完整的 Chat Completions 端点地址。
+     *
+     * @return 完整 API 端点
+     */
     public String endpoint() {
         String normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         String normalizedPath = chatCompletionsPath.startsWith("/") ? chatCompletionsPath : "/" + chatCompletionsPath;
@@ -35,6 +61,7 @@ public record AiProviderProperties(
     }
 
     private static String readWindowsEnvironmentValue(String name) {
+        // Windows 图形界面设置的用户环境变量可能不在当前 Java 进程环境中，兜底查注册表。
         String osName = System.getProperty("os.name", "");
         if (!osName.toLowerCase().contains("windows")) {
             return "";
