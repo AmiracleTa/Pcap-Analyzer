@@ -25,6 +25,8 @@ import java.util.Map;
 @Service
 public class AiChatCompletionClient {
 
+    private static final int DEFAULT_MAX_OUTPUT_TOKENS = 8192;
+
     private final AiProviderProperties properties;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
@@ -61,7 +63,8 @@ public class AiChatCompletionClient {
                 throw new IllegalStateException("AI request failed: " + response.body());
             }
             String content = messageContent(response.body());
-            return normalizeModelOutput(content);
+            String finishReason = finishReason(response.body());
+            return normalizeModelOutput(content, finishReason);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to parse AI security report", e);
         } catch (IOException e) {
@@ -89,9 +92,13 @@ public class AiChatCompletionClient {
                 "response_format", Map.of("type", "json_object"),
                 "thinking", Map.of("type", "disabled"),
                 "temperature", 0.1,
-                "max_tokens", 2200,
+                "max_tokens", maxOutputTokens(),
                 "stream", false
         );
+    }
+
+    private int maxOutputTokens() {
+        return properties.maxOutputTokens() > 0 ? properties.maxOutputTokens() : DEFAULT_MAX_OUTPUT_TOKENS;
     }
 
     private String messageContent(String body) throws JsonProcessingException {
@@ -106,8 +113,24 @@ public class AiChatCompletionClient {
         return content.asText();
     }
 
-    private AiSecurityModelOutput normalizeModelOutput(String content) throws JsonProcessingException {
-        JsonNode root = objectMapper.readTree(content);
+    private String finishReason(String body) throws JsonProcessingException {
+        JsonNode finishReason = objectMapper.readTree(body)
+                .path("choices")
+                .path(0)
+                .path("finish_reason");
+        return finishReason.isTextual() ? finishReason.asText() : "";
+    }
+
+    private AiSecurityModelOutput normalizeModelOutput(String content, String finishReason) throws JsonProcessingException {
+        JsonNode root;
+        try {
+            root = objectMapper.readTree(content);
+        } catch (JsonProcessingException e) {
+            if ("length".equals(finishReason)) {
+                throw new IllegalStateException("AI 返回内容超出长度限制，JSON 被截断。请提高 AI_MAX_OUTPUT_TOKENS 或重新生成报告。", e);
+            }
+            throw e;
+        }
         return new AiSecurityModelOutput(
                 textValue(root.get("riskLevel"), "unknown"),
                 intValue(root.get("riskScore")),

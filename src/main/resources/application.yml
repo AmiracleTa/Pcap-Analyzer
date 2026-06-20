@@ -27,3 +27,4 @@ ai:
     base-url: ${AI_BASE_URL:https://api.deepseek.com}
     chat-completions-path: ${AI_CHAT_COMPLETIONS_PATH:/chat/completions}
     timeout-seconds: ${AI_TIMEOUT_SECONDS:60}
+    max-output-tokens: ${AI_MAX_OUTPUT_TOKENS:8192}

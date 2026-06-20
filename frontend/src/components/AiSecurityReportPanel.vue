@@ -30,6 +30,7 @@ const categoryText = {
 const noReportMessage = '暂无安全报告，请先分析该文件。'
 
 const isEmptyReport = computed(() => !props.report || props.report.message === noReportMessage)
+const isUnavailableReport = computed(() => props.report && !props.report.available && !isEmptyReport.value)
 const findings = computed(() => props.report?.findings || [])
 const normalObservations = computed(() => props.report?.normalObservations || [])
 const recommendations = computed(() => props.report?.recommendations || [])
@@ -109,7 +110,7 @@ function endpointText(ip, port) {
         </div>
       </div>
 
-      <div v-if="!isEmptyReport" class="security-score">
+      <div v-if="!isEmptyReport && !isUnavailableReport" class="security-score">
         <span class="security-score-label">风险分数</span>
         <div class="security-score-value">
           <strong>{{ report.riskScore ?? 0 }}</strong>
@@ -125,6 +126,22 @@ function endpointText(ip, port) {
 
     <div v-else-if="isEmptyReport" class="empty compact security-empty">
       暂无安全报告，请先在文件管理中点击分析。
+    </div>
+
+    <div v-else-if="isUnavailableReport" class="security-report-grid">
+      <div class="security-summary-block">
+        <span>报告状态</span>
+        <p>{{ report.message || 'AI 安全报告暂不可用。' }}</p>
+      </div>
+
+      <div v-if="recommendations.length" class="security-block">
+        <h4>处理建议</h4>
+        <ul class="security-recommendation-list">
+          <li v-for="item in recommendations" :key="item">
+            <span>{{ item }}</span>
+          </li>
+        </ul>
+      </div>
     </div>
 
     <div v-else class="security-report-grid">

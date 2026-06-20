@@ -20,6 +20,7 @@ services:
       MYSQL_PASSWORD: mysql123123
       AI_ENABLED: "${AI_ENABLED:-false}"
       AI_API_KEY: "${AI_API_KEY:-}"
+      AI_MAX_OUTPUT_TOKENS: "${AI_MAX_OUTPUT_TOKENS:-8192}"
       APP_UPLOAD_DIR: /app/uploads
     ports:
       - 8080:8080

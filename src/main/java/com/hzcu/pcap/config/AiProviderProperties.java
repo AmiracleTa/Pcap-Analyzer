@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
  * @param baseUrl API 基础地址
  * @param chatCompletionsPath Chat Completions 路径
  * @param timeoutSeconds 请求超时时间，单位秒
+ * @param maxOutputTokens 最大输出 token 数
  */
 @ConfigurationProperties(prefix = "ai.provider")
 public record AiProviderProperties(
@@ -26,7 +27,8 @@ public record AiProviderProperties(
         String model,
         String baseUrl,
         String chatCompletionsPath,
-        int timeoutSeconds
+        int timeoutSeconds,
+        int maxOutputTokens
 ) {
     /**
      * 判断当前配置是否足以发起 AI 请求。
